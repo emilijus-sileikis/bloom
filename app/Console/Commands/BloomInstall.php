@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -38,8 +40,6 @@ class BloomInstall extends Command
         $this->createAdmin();
 
         $this->registerMiddleware();
-
-        $this->protectDashboardRoutes();
 
         $this->createDashboard('Dashboard');
 
@@ -144,26 +144,9 @@ class BloomInstall extends Command
 
     protected function updateUserTable()
     {
-        Artisan::call('make:migration add_is_admin_to_users_table');
-
-        // Get the path of the last generated migration file
-        $migrationFiles = scandir(database_path('migrations'));
-        $latestMigrationFile = array_diff($migrationFiles, ['.', '..']);
-        $latestMigrationFile = end($latestMigrationFile);
-        $migrationFilePath = database_path('migrations/' . $latestMigrationFile);
-
-        // Append code to the migration file to add 'is_admin' column
-        $codeToAdd = <<<'EOT'
-
-    public function up()
-    {
         Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_admin')->default(0); // Default to non-admin
+            $table->boolean('is_admin')->default(0);
         });
-    }
-EOT;
-
-        file_put_contents($migrationFilePath, $codeToAdd, FILE_APPEND);
 
         // Add 'is_admin' to the $fillable array in User.php
         $userModelPath = app_path('Models/User.php');
