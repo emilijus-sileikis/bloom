@@ -135,6 +135,7 @@ class BloomInstall extends Command
         $adminUser->name = $name;
         $adminUser->email = $email;
         $adminUser->password = bcrypt($password);
+        $adminUser->is_admin = 1;
 
         $adminUser->save();
 
@@ -165,7 +166,7 @@ EOT;
         file_put_contents($migrationFilePath, $codeToAdd, FILE_APPEND);
 
         // Add 'is_admin' to the $fillable array in User.php
-        $userModelPath = app_path('User.php');
+        $userModelPath = app_path('Models/User.php');
         $userModelContents = file_get_contents($userModelPath);
 
         if (!strpos($userModelContents, "'is_admin'")) {
