@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+
+    'is_admin', // Add 'is_admin' to the fillable fields
     ];
 
     /**
@@ -30,6 +32,8 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+
+    'is_admin', // Add 'is_admin' to the fillable fields
         'remember_token',
     ];
 

@@ -166,7 +166,7 @@ EOT;
         // Replace 'return view('dashboard');' with 'return view('admin/dashboard');'
         $updatedRoutesContents = str_replace(
             "return view('dashboard');",
-            "return view('admin/dashboard');",
+            "return view('admin/index');",
             $updatedRoutesContents
         );
 
