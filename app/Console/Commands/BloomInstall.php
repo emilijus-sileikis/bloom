@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -64,6 +66,8 @@ class BloomInstall extends Command
 
         $this->protectDashboardRoutes();
 
+        $this->createDashboard('Dashboard');
+
         $this->info('Bloom admin dashboard and admin user installed successfully.');
     }
 
@@ -99,5 +103,44 @@ class BloomInstall extends Command
 
             file_put_contents($routes, $content);
         }
+    }
+
+    protected function getStub($type)
+    {
+        return file_get_contents(resource_path("stubs/$type.stub"));
+    }
+
+    protected function controller($name)
+    {
+        $template = str_replace(
+            [
+                '{{modelName}}',
+                '{{modelNameLowerCase}}',
+            ],
+            [
+                $name,
+                strtolower(Str::plural($name)),
+            ],
+            $this->getStub('AdminController')
+        );
+
+        file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
+    }
+
+    protected function view($name)
+    {
+        $template = $this->getStub('Dashboard');
+
+        file_put_contents(resource_path("views/Admin/{$name}.blade.php"), $template);
+    }
+
+    protected function createDashboard($name)
+    {
+        $this->controller($name);
+        $this->view($name);
+
+//        Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
+
+        $this->info($name.' CRUD created successfully.');
     }
 }
