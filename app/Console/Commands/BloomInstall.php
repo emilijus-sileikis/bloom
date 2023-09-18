@@ -211,7 +211,7 @@ EOT;
                 $name,
                 strtolower(Str::plural($name)),
             ],
-            $this->getStub('AdminController')
+            $this->getStub('CommandController')
         );
 
         file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
