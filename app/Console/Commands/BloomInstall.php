@@ -150,8 +150,8 @@ EOT;
      */
     protected function createDashboard($name)
     {
-        $this->controller($name);
-        $this->view($name);
+        //$this->controller($name);
+        $this->view();
 
         $routesPath = base_path('routes/web.php');
         $routesContents = file_get_contents($routesPath);
@@ -161,6 +161,13 @@ EOT;
             "->middleware(['auth', 'verified'])",
             "->middleware(['auth', 'admin'])",
             $routesContents
+        );
+
+        // Replace 'return view('dashboard');' with 'return view('admin/dashboard');'
+        $updatedRoutesContents = str_replace(
+            "return view('dashboard');",
+            "return view('admin/dashboard');",
+            $updatedRoutesContents
         );
 
         file_put_contents($routesPath, $updatedRoutesContents);
@@ -173,7 +180,7 @@ EOT;
      */
     protected function getStub($type)
     {
-        return file_get_contents(resource_path("stubs/$type.stub"));
+        return file_get_contents(resource_path("stubs/admin/$type.stub"));
     }
 
     /**
@@ -199,11 +206,25 @@ EOT;
     /**
      * Creates the view.
      */
-    protected function view($name)
+    protected function view()
     {
         $template = $this->getStub('Dashboard');
+        $navbar = $this->getStub('Navbar');
+        $sidebar = $this->getStub('Sidebar');
+        $index = $this->getStub('Index');
+        $footer = $this->getStub('Footer');
 
-        file_put_contents(resource_path("views/{$name}.blade.php"), $template);
+        $viewsPath = resource_path("views/admin");
+
+        if (!file_exists($viewsPath)) {
+            mkdir($viewsPath, 0755, true);
+        }
+
+        file_put_contents(resource_path("views/admin/dashboard.blade.php"), $template);
+        file_put_contents(resource_path("views/admin/navbar.blade.php"), $navbar);
+        file_put_contents(resource_path("views/admin/sidebar.blade.php"), $sidebar);
+        file_put_contents(resource_path("views/admin/index.blade.php"), $index);
+        file_put_contents(resource_path("views/admin/footer.blade.php"), $footer);
     }
 
     /**
