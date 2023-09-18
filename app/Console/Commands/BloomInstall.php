@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Process;
 
 class BloomInstall extends Command
 {
@@ -27,14 +29,21 @@ class BloomInstall extends Command
      */
     public function handle()
     {
+        // Create a new process
+        $process = new Process(['php', 'artisan', 'breeze:install']);
 
-        // Check if Laravel Breeze is already installed
-        if (!class_exists('Laravel\\Breeze\\BreezeServiceProvider')) {
-            // Require Laravel Breeze package using Composer
-            exec('composer require laravel/breeze');
+        // Set the input stream to allow interaction
+        $process->setInput("blade\n\n");
 
-            // Generate authentication scaffolding with Breeze
-            Artisan::call('breeze:install');
+        // Start the process
+        $process->start();
+
+        // Wait for the process to complete
+        $process->wait();
+
+        // Check if the process was successful
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
         }
 
         // Creating the admin user
