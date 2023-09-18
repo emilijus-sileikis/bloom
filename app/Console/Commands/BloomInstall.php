@@ -142,11 +142,17 @@ class BloomInstall extends Command
         Artisan::call('make:middleware AdminMiddleware');
     }
 
-    protected function updateUserTable()
+    protected function updateUserTable($table = 'users', $column = 'is_admin')
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_admin')->default(0);
-        });
+        if (!Schema::hasColumn($table, $column)) {
+            Schema::table($table, function (Blueprint $table) use ($column) {
+                $table->boolean($column)->default(0);
+            });
+
+            $this->info("$column column added to the $table table.");
+        } else {
+            $this->info("$column column already exists in the $table table. No changes made.");
+        }
 
         // Add 'is_admin' to the $fillable array in User.php
         $userModelPath = app_path('Models/User.php');
