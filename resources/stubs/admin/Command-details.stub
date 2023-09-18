@@ -1,0 +1,25 @@
+@extends('admin.dashboard')
+
+@section('content')
+    <main>
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Command Details {{ $commandName }}</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.commands.index') }}">Commands</a></li>
+                <li class="breadcrumb-item active">{{ $commandName }}</li>
+            </ol>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            {!! nl2br($commandDescription) !!}
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ route('dashboard.commands.execute', ['command' => $commandName]) }}" class="btn btn-primary">Execute Command</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+@endsection

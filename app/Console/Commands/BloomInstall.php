@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -150,7 +151,7 @@ EOT;
      */
     protected function createDashboard($name)
     {
-        //$this->controller($name);
+        $this->controller('Command');
         $this->view();
 
         $routesPath = base_path('routes/web.php');
@@ -169,6 +170,19 @@ EOT;
             "return view('admin/index');",
             $updatedRoutesContents
         );
+
+        $routes = <<<EOT
+        // List commands
+        Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
+
+        // Show a command
+        Route::get('/admin/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
+
+        // Execute a command
+        Route::post('/admin/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
+        EOT;
+
+        File::append(base_path('routes/api.php'), $routes);
 
         file_put_contents($routesPath, $updatedRoutesContents);
 
@@ -213,6 +227,8 @@ EOT;
         $sidebar = $this->getStub('Sidebar');
         $index = $this->getStub('Index');
         $footer = $this->getStub('Footer');
+        $commands = $this->getStub('Commands');
+        $details = $this->getStub('Command-details');
 
         $viewsPath = resource_path("views/admin");
 
@@ -225,6 +241,8 @@ EOT;
         file_put_contents(resource_path("views/admin/sidebar.blade.php"), $sidebar);
         file_put_contents(resource_path("views/admin/index.blade.php"), $index);
         file_put_contents(resource_path("views/admin/footer.blade.php"), $footer);
+        file_put_contents(resource_path("views/admin/commands.blade.php"), $commands);
+        file_put_contents(resource_path("views/admin/command-details.blade.php"), $details);
     }
 
     /**

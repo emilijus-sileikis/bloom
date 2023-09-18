@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Str;
+
+class CommandController extends Controller
+{
+    public function index()
+    {
+        $commandsWithDescriptions = $this->getCommandsWithDescriptions();
+
+        return view('admin.commands', compact('commandsWithDescriptions'));
+    }
+
+    public function show($commandName)
+    {
+        $commandDescription = $this->getCommandDescription($commandName);
+
+        return view('admin.command-details', compact('commandDescription', 'commandName'));
+    }
+
+    private function getCommandsWithDescriptions()
+    {
+        $commandsWithDescriptions = [];
+
+        $commands = collect(Artisan::all())->filter(function ($command, $key) {
+            return Str::startsWith($key, 'bloom:');
+        });
+
+        foreach ($commands as $key => $command) {
+
+            $parts = explode(':', $key, 2);
+            $commandName = count($parts) > 1 ? $parts[1] : $key;
+
+            try {
+                $output = Artisan::call('help', ['command' => $key]);
+                $description = Artisan::output();
+            } catch (\Exception $e) {
+                $description = 'Command description not available.';
+            }
+
+            $commandsWithDescriptions[] = [
+                'name' => $commandName,
+                'key' => $key,
+                'description' => $description,
+            ];
+        }
+
+        return $commandsWithDescriptions;
+    }
+
+    private function getCommandDescription($commandName)
+    {
+        try {
+            $output = Artisan::call('help', ['command' => $commandName]);
+            return Artisan::output();
+        } catch (\Exception $e) {
+            return 'Command description not available.';
+        }
+    }
+}
