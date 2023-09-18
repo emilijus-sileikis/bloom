@@ -31,36 +31,11 @@ class BloomInstall extends Command
      */
     public function handle()
     {
-        // Create a new process
-        $process = new Process(['php', 'artisan', 'breeze:install']);
+        $this->setupBreeze();
 
-        // Set the input stream to allow interaction
-        $process->setInput("blade\n\n");
+        $this->updateUserTable();
 
-        // Start the process
-        $process->start();
-
-        // Wait for the process to complete
-        $process->wait();
-
-        // Check if the process was successful
-        if (!$process->isSuccessful()) {
-            throw new ProcessFailedException($process);
-        }
-
-        // Creating the admin user
-        $name = $this->ask('Enter the name of the admin user:');
-        $email = $this->ask('Enter the admin email:');
-        $password = $this->secret('Enter the admin password:');
-
-        $adminUser = new User();
-        $adminUser->name = $name;
-        $adminUser->email = $email;
-        $adminUser->password = bcrypt($password);
-
-        $adminUser->save();
-
-        Artisan::call('make:middleware AdminMiddleware');
+        $this->createAdmin();
 
         $this->registerMiddleware();
 
@@ -87,21 +62,6 @@ class BloomInstall extends Command
             );
 
             file_put_contents($kernel, $content);
-        }
-    }
-
-    protected function protectDashboardRoutes()
-    {
-        // Apply the middleware to routes
-        $routes = base_path('routes/web.php');
-        $content = file_get_contents($routes);
-
-        if (!str_contains($content, 'admin')) {
-            $content .= "\n\nRoute::middleware(['admin'])->group(function () {
-        Route::get('/dashboard', 'DashboardController@index');
-    });";
-
-            file_put_contents($routes, $content);
         }
     }
 
@@ -142,5 +102,82 @@ class BloomInstall extends Command
 //        Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
 
         $this->info($name.' CRUD created successfully.');
+    }
+
+    protected function setupBreeze()
+    {
+        // Create a new process
+        $process = new Process(['php', 'artisan', 'breeze:install']);
+
+        // Set the input stream to allow interaction
+        $process->setInput("blade\n\n");
+
+        // Start the process
+        $process->start();
+
+        // Wait for the process to complete
+        $process->wait();
+
+        // Check if the process was successful
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
+        }
+    }
+
+    protected function createAdmin()
+    {
+        // Creating the admin user
+        $name = $this->ask('Enter the name of the admin user:');
+        $email = $this->ask('Enter the admin email:');
+        $password = $this->secret('Enter the admin password:');
+
+        $adminUser = new User();
+        $adminUser->name = $name;
+        $adminUser->email = $email;
+        $adminUser->password = bcrypt($password);
+
+        $adminUser->save();
+
+        Artisan::call('make:middleware AdminMiddleware');
+    }
+
+    protected function updateUserTable()
+    {
+        Artisan::call('make:migration add_is_admin_to_users_table');
+
+        // Get the path of the last generated migration file
+        $migrationFiles = scandir(database_path('migrations'));
+        $latestMigrationFile = array_diff($migrationFiles, ['.', '..']);
+        $latestMigrationFile = end($latestMigrationFile);
+        $migrationFilePath = database_path('migrations/' . $latestMigrationFile);
+
+        // Append code to the migration file to add 'is_admin' column
+        $codeToAdd = <<<'EOT'
+
+    public function up()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->boolean('is_admin')->default(0); // Default to non-admin
+        });
+    }
+EOT;
+
+        file_put_contents($migrationFilePath, $codeToAdd, FILE_APPEND);
+
+        // Add 'is_admin' to the $fillable array in User.php
+        $userModelPath = app_path('User.php');
+        $userModelContents = file_get_contents($userModelPath);
+
+        if (!strpos($userModelContents, "'is_admin'")) {
+            $fillableCode = <<<'EOT'
+
+    'is_admin', // Add 'is_admin' to the fillable fields
+EOT;
+            // Append 'is_admin' to the $fillable array
+            file_put_contents($userModelPath, str_replace("'password',", "'password',\n" . $fillableCode, $userModelContents));
+        }
+
+        // Run the migration to apply the changes to the database
+        Artisan::call('migrate');
     }
 }
