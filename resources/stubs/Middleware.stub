@@ -5,15 +5,16 @@ namespace {{namespace}};
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class {{class}}
 {
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->role_as !== '1') {
+        if (!Auth::user()->is_admin == '1') {
             return redirect('/')->with('status', 'Access Denied. You are not an admin!');
+        } else {
+            return $next($request);
         }
-
-        return $next($request);
     }
 }

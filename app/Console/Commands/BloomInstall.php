@@ -101,6 +101,20 @@ class BloomInstall extends Command
 
 //        Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
 
+        // Replace 'verified' middleware with 'admin' middleware in routes/web.php
+        $routesPath = base_path('routes/web.php');
+        $routesContents = file_get_contents($routesPath);
+
+        // Replace 'verified' middleware with 'admin' middleware
+        $updatedRoutesContents = str_replace(
+            "->middleware(['auth', 'verified'])",
+            "->middleware(['auth', 'admin'])",
+            $routesContents
+        );
+
+        // Save the updated routes file contents
+        file_put_contents($routesPath, $updatedRoutesContents);
+
         $this->info($name.' CRUD created successfully.');
     }
 
