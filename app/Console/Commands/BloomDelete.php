@@ -81,5 +81,6 @@ class BloomDelete extends Command
             $content = str_replace($routeDefinition, '', $content);
             file_put_contents($apiRouteFile, $content);
         }
+        $this->info($name.' CRUD deleted successfully.');
     }
 }

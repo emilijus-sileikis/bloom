@@ -61,6 +61,8 @@ class BloomCreate extends Command
         File::append(base_path('routes/api.php'), "\n".'Route::resource(\'' . Str::plural(strtolower($name)) . "', '{$name}Controller');");
 
         Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
+
+        $this->info($name.' CRUD created successfully.');
     }
 
     protected function getStub($type)
