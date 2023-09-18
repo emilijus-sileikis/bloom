@@ -182,7 +182,7 @@ EOT;
         Route::post('/admin/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
         EOT;
 
-        File::append(base_path('routes/api.php'), $routes);
+        File::append(base_path('routes/web.php'), $routes);
 
         file_put_contents($routesPath, $updatedRoutesContents);
 
