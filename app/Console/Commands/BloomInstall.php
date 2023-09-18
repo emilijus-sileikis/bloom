@@ -131,7 +131,7 @@ class BloomInstall extends Command
     {
         $template = $this->getStub('Dashboard');
 
-        file_put_contents(resource_path("views/Admin/{$name}.blade.php"), $template);
+        file_put_contents(resource_path("views/{$name}.blade.php"), $template);
     }
 
     protected function createDashboard($name)

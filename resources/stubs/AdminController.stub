@@ -1,4 +1,4 @@
-  <?php
+<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -8,6 +8,6 @@ use App\Http\Controllers\Controller;
   {
       public function index()
       {
-          return view('/Admin'.${{modelNameLowerCase}});
+          return view('{{modelNameLowerCase}}');
       }
   }
