@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -46,85 +45,11 @@ class BloomInstall extends Command
         $this->info('Bloom admin dashboard and admin user installed successfully.');
     }
 
-    protected function registerMiddleware()
-    {
-        $kernel = app_path('Http/Kernel.php');
-        $content = file_get_contents($kernel);
-
-        if (!str_contains($content, 'AdminMiddleware::class')) {
-            // Add the AdminMiddleware
-            $replacement = "'admin' => \App\Http\Middleware\AdminMiddleware::class,";
-
-            $content = preg_replace(
-                "/'auth' => \\\\App\\\\Http\\\\Middleware\\\\Authenticate::class,/",
-                "$0\n        $replacement",
-                $content
-            );
-
-            file_put_contents($kernel, $content);
-        }
-    }
-
-    protected function getStub($type)
-    {
-        return file_get_contents(resource_path("stubs/$type.stub"));
-    }
-
-    protected function controller($name)
-    {
-        $template = str_replace(
-            [
-                '{{modelName}}',
-                '{{modelNameLowerCase}}',
-            ],
-            [
-                $name,
-                strtolower(Str::plural($name)),
-            ],
-            $this->getStub('AdminController')
-        );
-
-        file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
-    }
-
-    protected function view($name)
-    {
-        $template = $this->getStub('Dashboard');
-
-        file_put_contents(resource_path("views/{$name}.blade.php"), $template);
-    }
-
-    protected function middleware($name)
-    {
-        $template = $this->getStub('Middleware');
-
-        file_put_contents(app_path("/Http/Middleware/{$name}.php"), $template);
-    }
-
-    protected function createDashboard($name)
-    {
-        $this->controller($name);
-        $this->view($name);
-
-//        Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
-
-        // Replace 'verified' middleware with 'admin' middleware in routes/web.php
-        $routesPath = base_path('routes/web.php');
-        $routesContents = file_get_contents($routesPath);
-
-        // Replace 'verified' middleware with 'admin' middleware
-        $updatedRoutesContents = str_replace(
-            "->middleware(['auth', 'verified'])",
-            "->middleware(['auth', 'admin'])",
-            $routesContents
-        );
-
-        // Save the updated routes file contents
-        file_put_contents($routesPath, $updatedRoutesContents);
-
-        $this->info($name.' CRUD created successfully.');
-    }
-
+    /**
+     * Installs Breeze carcass.
+     *
+     * @throws ProcessFailedException
+     */
     protected function setupBreeze()
     {
         // Create a new process
@@ -145,9 +70,44 @@ class BloomInstall extends Command
         }
     }
 
+    /**
+     * Updates the User table and adds 'is_admin' column.
+     */
+    protected function updateUserTable($table = 'users', $column = 'is_admin')
+    {
+        // Check if column already exists
+        if (!Schema::hasColumn($table, $column)) {
+            Schema::table($table, function (Blueprint $table) use ($column) {
+                $table->boolean($column)->default(0);
+            });
+
+            $this->info("$column column added to the $table table.");
+        } else {
+            $this->info("$column column already exists in the $table table. No changes made.");
+        }
+
+        // Add 'is_admin' to $fillable in User.php
+        $userModelPath = app_path('Models/User.php');
+        $userModelContents = file_get_contents($userModelPath);
+
+        if (!strpos($userModelContents, "'is_admin'")) {
+            $fillableCode = <<<'EOT'
+
+    'is_admin', // Add 'is_admin' to the fillable fields
+EOT;
+            // Append 'is_admin' to $fillable
+            file_put_contents($userModelPath, str_replace("'password',", "'password',\n" . $fillableCode, $userModelContents));
+        }
+
+        // Migrate the database
+        Artisan::call('migrate');
+    }
+
+    /**
+     * Creates the admin user.
+     */
     protected function createAdmin()
     {
-        // Creating the admin user
         $name = $this->ask('Enter the name of the admin user:');
         $email = $this->ask('Enter the admin email:');
         $password = $this->secret('Enter the admin password:');
@@ -163,32 +123,96 @@ class BloomInstall extends Command
         $this->middleware('AdminMiddleware');
     }
 
-    protected function updateUserTable($table = 'users', $column = 'is_admin')
+    /**
+     * Registers the middleware (adds it to Kernel.php).
+     */
+    protected function registerMiddleware()
     {
-        if (!Schema::hasColumn($table, $column)) {
-            Schema::table($table, function (Blueprint $table) use ($column) {
-                $table->boolean($column)->default(0);
-            });
+        $kernel = app_path('Http/Kernel.php');
+        $content = file_get_contents($kernel);
 
-            $this->info("$column column added to the $table table.");
-        } else {
-            $this->info("$column column already exists in the $table table. No changes made.");
+        if (!str_contains($content, 'AdminMiddleware::class')) {
+            // Add AdminMiddleware to Kernel.php
+            $replacement = "'admin' => \App\Http\Middleware\AdminMiddleware::class,";
+
+            $content = preg_replace(
+                "/'auth' => \\\\App\\\\Http\\\\Middleware\\\\Authenticate::class,/",
+                "$0\n        $replacement",
+                $content
+            );
+
+            file_put_contents($kernel, $content);
         }
+    }
 
-        // Add 'is_admin' to the $fillable array in User.php
-        $userModelPath = app_path('Models/User.php');
-        $userModelContents = file_get_contents($userModelPath);
+    /**
+     * Creates the Dashboard CRUD (Controller and View).
+     */
+    protected function createDashboard($name)
+    {
+        $this->controller($name);
+        $this->view($name);
 
-        if (!strpos($userModelContents, "'is_admin'")) {
-            $fillableCode = <<<'EOT'
+        $routesPath = base_path('routes/web.php');
+        $routesContents = file_get_contents($routesPath);
 
-    'is_admin', // Add 'is_admin' to the fillable fields
-EOT;
-            // Append 'is_admin' to the $fillable array
-            file_put_contents($userModelPath, str_replace("'password',", "'password',\n" . $fillableCode, $userModelContents));
-        }
+        // Replace 'verified' middleware with 'admin' middleware
+        $updatedRoutesContents = str_replace(
+            "->middleware(['auth', 'verified'])",
+            "->middleware(['auth', 'admin'])",
+            $routesContents
+        );
 
-        // Run the migration to apply the changes to the database
-        Artisan::call('migrate');
+        file_put_contents($routesPath, $updatedRoutesContents);
+
+        $this->info($name.' CRUD created successfully.');
+    }
+
+    /**
+     * Gets stub file based on its name/type.
+     */
+    protected function getStub($type)
+    {
+        return file_get_contents(resource_path("stubs/$type.stub"));
+    }
+
+    /**
+     * Creates the controller.
+     */
+    protected function controller($name)
+    {
+        $template = str_replace(
+            [
+                '{{modelName}}',
+                '{{modelNameLowerCase}}',
+            ],
+            [
+                $name,
+                strtolower(Str::plural($name)),
+            ],
+            $this->getStub('AdminController')
+        );
+
+        file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
+    }
+
+    /**
+     * Creates the view.
+     */
+    protected function view($name)
+    {
+        $template = $this->getStub('Dashboard');
+
+        file_put_contents(resource_path("views/{$name}.blade.php"), $template);
+    }
+
+    /**
+     * Creates the middleware.
+     */
+    protected function middleware($name)
+    {
+        $template = $this->getStub('Middleware');
+
+        file_put_contents(app_path("/Http/Middleware/{$name}.php"), $template);
     }
 }
