@@ -27,10 +27,15 @@ class BloomInstall extends Command
      */
     public function handle()
     {
-        //Installing Laravel Breeze
-        exec('composer require laravel/breeze');
 
-        Artisan::call('breeze:install');
+        // Check if Laravel Breeze is already installed
+        if (!class_exists('Laravel\\Breeze\\BreezeServiceProvider')) {
+            // Require Laravel Breeze package using Composer
+            exec('composer require laravel/breeze');
+
+            // Generate authentication scaffolding with Breeze
+            Artisan::call('breeze:install');
+        }
 
         // Creating the admin user
         $name = $this->ask('Enter the name of the admin user:');
