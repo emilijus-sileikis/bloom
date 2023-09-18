@@ -94,6 +94,13 @@ class BloomInstall extends Command
         file_put_contents(resource_path("views/{$name}.blade.php"), $template);
     }
 
+    protected function middleware($name)
+    {
+        $template = $this->getStub('Middleware');
+
+        file_put_contents(app_path("/Http/Middleware/{$name}.php"), $template);
+    }
+
     protected function createDashboard($name)
     {
         $this->controller($name);
@@ -153,7 +160,7 @@ class BloomInstall extends Command
 
         $adminUser->save();
 
-        Artisan::call('make:middleware AdminMiddleware');
+        $this->middleware('AdminMiddleware');
     }
 
     protected function updateUserTable($table = 'users', $column = 'is_admin')
