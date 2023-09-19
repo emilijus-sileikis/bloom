@@ -1,0 +1,22 @@
+{
+    "name": "emilijus/bloom",
+    "description": "Laravel 10 CRUD generator",
+    "type": "laravel-package",
+    "require": {
+	"php": "^8.1",
+        "laravel/breeze": "^1.23"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Emilijus\\Bloom\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Emilijus",
+            "email": "emilijus.sileikis@mif.stud.vu.lt"
+        }
+    ],
+    "minimum-stability": "alpha"
+}
