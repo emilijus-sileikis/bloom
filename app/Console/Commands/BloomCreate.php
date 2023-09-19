@@ -35,12 +35,22 @@ class BloomCreate extends Command
             $this->bloomCreate($name);
         } else
         {
-            $this->error("No name provided.");
+            $this->error("ERROR 0: No name provided.");
         }
     }
 
     protected function bloomCreate($name)
     {
+        // File existence checks
+        $controllerExists = file_exists(app_path("/Http/Controllers/{$name}Controller.php"));
+        $modelExists = file_exists(app_path("/{$name}.php"));
+        $requestExists = file_exists(app_path("/Http/Requests/{$name}Request.php"));
+
+        if ($controllerExists || $modelExists || $requestExists) {
+            $this->error("ERROR 1: {$name} CRUD already exists.");
+            return;
+        }
+
         $this->controller($name);
         $this->model($name);
         $this->request($name);
@@ -49,7 +59,7 @@ class BloomCreate extends Command
 
         Artisan::call('make:migration create_' . strtolower(Str::plural($name)) . '_table --create=' . strtolower(Str::plural($name)));
 
-        $this->info($name.' CRUD created successfully.');
+        $this->info("CREATION SUCCESS: {$name} CRUD created successfully.");
     }
 
     protected function getStub($type)

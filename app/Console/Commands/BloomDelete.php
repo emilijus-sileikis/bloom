@@ -55,10 +55,6 @@ class BloomDelete extends Command
             }
         }
 
-        if (!empty($filesToDelete)) {
-            File::delete($filesToDelete);
-        }
-
         // Remove the route definition from routes/api.php.
         $apiRouteFile = base_path('routes/api.php');
         $routeDefinition = "Route::resource('" . $tableName . "', '{$name}Controller');";
@@ -67,7 +63,20 @@ class BloomDelete extends Command
             $content = file_get_contents($apiRouteFile);
             $content = str_replace($routeDefinition, '', $content);
             file_put_contents($apiRouteFile, $content);
+        } else {
+            $this->error("Error locating api.php file.");
+            return;
         }
-        $this->info($name.' CRUD deleted successfully.');
+
+        foreach ($filesToDelete as $fileToDelete) {
+            if (File::exists($fileToDelete)) {
+                File::delete($fileToDelete);
+            } else {
+                $this->error("ERROR 2: File not found: {$fileToDelete}");
+                return;
+            }
+        }
+
+        $this->info("DELETION SUCCESS: {$name} CRUD deleted successfully.");
     }
 }

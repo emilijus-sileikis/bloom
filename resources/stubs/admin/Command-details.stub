@@ -3,19 +3,42 @@
 @section('content')
     <main>
         <div class="container-fluid px-4">
-            <h1 class="mt-4">Command Details {{ $commandName }}</h1>
+            <h1 class="mt-4">Command Details: {{ $commandName }}</h1>
             <ol class="breadcrumb mb-4">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.commands.index') }}">Commands</a></li>
                 <li class="breadcrumb-item active">{{ $commandName }}</li>
             </ol>
             <div class="row">
+                @if (session('status'))
+                    <div class="alert alert-success mt-4">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="alert alert-danger mt-4">
+                        {{ session('error') }}
+                    </div>
+                @endif
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-body">
                             {!! nl2br($commandDescription) !!}
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('dashboard.commands.execute', ['command' => $commandName]) }}" class="btn btn-primary">Execute Command</a>
+                            @if ($commandName == 'bloom:create' || $commandName == 'bloom:delete')
+                                <form method="POST" action="{{ route('dashboard.commands.execute', ['command' => $commandName]) }}">
+                                    @csrf
+                                    <div class="form-group">
+                                        <div class="h4">Arguments</div>
+                                        <label for="crudName">Name (max 30 char.):</label>
+                                        <input type="text" class="form-control mb-2" id="crudName" name="crudName" maxlength="30" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Execute Command</button>
+                                </form>
+                            @else
+                                <a href="{{ route('dashboard.commands.execute', ['command' => $commandName, 'crudName' => '']) }}" class="btn btn-primary">Execute Command</a>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -23,3 +46,4 @@
         </div>
     </main>
 @endsection
+
