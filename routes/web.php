@@ -29,7 +29,3 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-Route::get('/dashboard/commands', function () {
-    return view('admin/commands');
-})->middleware(['auth', 'admin'])->name('dashboard-commands');
