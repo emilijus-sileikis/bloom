@@ -171,18 +171,16 @@ EOT;
             $updatedRoutesContents
         );
 
-        $routes = <<<EOT
-        // List commands
-        Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
+        // Append the new routes
+        $newRoutes = "
+    Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
 
-        // Show a command
-        Route::get('/admin/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
+    Route::get('/dashboard/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
 
-        // Execute a command
-        Route::post('/admin/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
-        EOT;
+    Route::post('/dashboard/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
+    ";
 
-        File::append(base_path('routes/web.php'), $routes);
+        $updatedRoutesContents .= $newRoutes;
 
         file_put_contents($routesPath, $updatedRoutesContents);
 
