@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Str;
+
+class CommandController extends Controller
+{
+    public function index()
+    {
+        $commands = $this->getCommandsAndDescriptions();
+
+        return view('admin.commands', compact('commands'));
+    }
+
+    public function show($commandName)
+    {
+        $commandDescription = $this->getCommandsAndDescriptions($commandName);
+
+        return view('admin.command-details', compact('commandName', 'commandDescription'));
+    }
+
+    public function execute($commandName, Request $request)
+    {
+        // Validation
+        $request->validate([
+            'crudName' => 'required|string|max:30',
+        ]);
+
+        $crudName = $request->input('crudName');
+        $fullCommand = "$commandName $crudName";
+
+        Artisan::call($fullCommand);
+
+        $output = Artisan::output();
+
+        // Check if the command was executed successfully
+        if (str_starts_with($output, 'ERROR 1:')) {
+            return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
+        } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
+            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
+        } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
+            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
+        } elseif (str_starts_with($output, 'ERROR 2:')) {
+            return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+        } else {
+            return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+        }
+    }
+
+    private function getCommandsAndDescriptions($specificCommand = null)
+    {
+        $commandsWithDescriptions = [];
+        $commands = collect(Artisan::all())->filter(function ($command, $key) {
+            return Str::startsWith($key, 'bloom:');
+        });
+
+        foreach ($commands as $key => $command) {
+            $parts = explode(':', $key, 2);
+            $commandName = count($parts) > 1 ? $parts[1] : $key;
+
+            try {
+                if ($specificCommand === null || $specificCommand === $key) {
+                    Artisan::call('help', ['command_name' => $key]);
+                    $description = Artisan::output();
+
+                    $commandsWithDescriptions[] = [
+                        'name' => $commandName,
+                        'key' => $key,
+                        'description' => $description,
+                    ];
+
+                    if ($specificCommand === $key) {
+                        return $description;
+                    }
+                }
+            } catch (\Exception $e) {
+                $description = 'Command description not available.';
+            }
+        }
+
+        return $specificCommand ? 'Command not found.' : $commandsWithDescriptions;
+    }
+}

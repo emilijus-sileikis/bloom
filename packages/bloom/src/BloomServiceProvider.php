@@ -1,10 +1,11 @@
 <?php
 
-namespace Roland\Crud;
+namespace Emilijus\Bloom;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\File;
 
-class CrudServiceProvider extends ServiceProvider
+class BloomServiceProvider extends ServiceProvider
 {
     /**
      * Indicates if loading of the provider is deferred.
@@ -20,18 +21,15 @@ class CrudServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // Define a custom tag for publishing
+        $publishTag = 'bloom';
 
-    	$stubsPath = resource_path('views/stubs');
-
-    	if (!File::exists($stubsPath)) {
-        	// If the 'stubs' directory doesn't exist, create it
-        	File::makeDirectory($stubsPath, 0755, true);
-    	}
-
+        // Publish stub files, commands, and assets to the project
         $this->publishes([
-            __DIR__ . '/Config/bloomConfig.php' => config_path('bloomConfig.php'),
-        ]);
-
+            __DIR__ . '/../resources/stubs' => resource_path('stubs'),
+            __DIR__ . '/../Commands' => app_path('Console/Commands'),
+            __DIR__ . '/../resources/public' => public_path('/'),
+        ], $publishTag);
     }
 
     /**
@@ -41,16 +39,6 @@ class CrudServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        
-          if ($this->app->runningInConsole()) {
-                $this->commands([
-                    Commands\BloomInstall::class,
-                    Commands\BloomCreate::class,
-                    Commands\BloomDelete::class,
-                    
-                ]);
-            }
-
-     }
-
+        //
+    }
 }

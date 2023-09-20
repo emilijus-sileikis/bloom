@@ -18,5 +18,12 @@
             "email": "emilijus.sileikis@mif.stud.vu.lt"
         }
     ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Emilijus\\Bloom\\BloomServiceProvider"
+            ]
+        }
+    },
     "minimum-stability": "alpha"
 }
