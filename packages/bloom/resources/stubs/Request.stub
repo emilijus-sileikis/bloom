@@ -10,8 +10,12 @@ class {{modelName}}Request extends FormRequest
     {
         return true;
     }
+
     public function rules()
     {
-        return [];
+        return
+        [
+{{rules}}
+        ];
     }
 }

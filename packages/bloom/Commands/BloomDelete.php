@@ -45,7 +45,7 @@ class BloomDelete extends Command
 
         $filesToDelete = [
             app_path("/Http/Controllers/{$name}Controller.php"),
-            app_path("/{$name}.php"),
+            app_path("/Models/{$name}.php"),
             app_path("/Http/Requests/{$name}Request.php"),
         ];
 

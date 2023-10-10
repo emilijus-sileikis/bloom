@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\{{modelName}};
+use App\Models\{{modelName}};
 use App\Http\Requests\{{modelName}}Request;
 
 class {{modelName}}Controller extends Controller
 {
     public function index()
     {
-        ${{modelNameLowerCase}} = {{modelName}}::latest()->get();
+        ${{modelNameLowerCase}} = {{modelName}}::all();
 
         return view(${{modelNameLowerCase}});
     }

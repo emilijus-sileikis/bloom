@@ -23,6 +23,11 @@ class CommandController extends Controller
         return view('admin.command-details', compact('commandName', 'commandDescription'));
     }
 
+    public function examples()
+    {
+        return view('admin.examples');
+    }
+
     public function execute($commandName, Request $request)
     {
         // Validation
@@ -31,24 +36,31 @@ class CommandController extends Controller
         ]);
 
         $crudName = $request->input('crudName');
-        $fullCommand = "$commandName $crudName";
 
-        Artisan::call($fullCommand);
+        if ($commandName === 'bloom:delete') {
 
-        $output = Artisan::output();
+            $fullCommand = "$commandName $crudName";
 
-        // Check if the command was executed successfully
-        if (str_starts_with($output, 'ERROR 1:')) {
-            return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
-        } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
-            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
-        } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
-            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
-        } elseif (str_starts_with($output, 'ERROR 2:')) {
-            return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
-        } else {
-            return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+            return $this->commandCall($fullCommand, $crudName);
         }
+
+        if ($commandName === 'bloom:create') {
+            $relatedModel = $request->input('relatedModel');
+            $modelAttributes = $request->input('modelAttributes');
+            $relationshipType = $request->input('relationshipType');
+
+            if (!empty($relatedModel) && !empty($relationshipType)) {
+                config(['command_from_frontend' => true]);
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --related-model=$relatedModel --relation-type=$relationshipType --skip-relationships";
+
+            } else {
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --skip-relationships";
+
+            }
+            return $this->commandCall($fullCommand, $crudName);
+        }
+
+         else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
     }
 
     private function getCommandsAndDescriptions($specificCommand = null)
@@ -83,5 +95,25 @@ class CommandController extends Controller
         }
 
         return $specificCommand ? 'Command not found.' : $commandsWithDescriptions;
+    }
+
+    public function commandCall(string $fullCommand, mixed $crudName)
+    {
+        Artisan::call($fullCommand);
+
+        $output = Artisan::output();
+
+        // Check if the command was executed successfully
+        if (str_starts_with($output, 'ERROR 1:')) {
+            return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
+        } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
+            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
+        } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
+            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
+        } elseif (str_starts_with($output, 'ERROR 2:')) {
+            return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+        } else {
+            return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+        }
     }
 }

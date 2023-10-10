@@ -175,6 +175,8 @@ EOT;
         $newRoutes = "
     Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
 
+    Route::get('/dashboard/examples', [App\Http\Controllers\Admin\CommandController::class, 'examples'])->middleware(['auth', 'admin'])->name('dashboard.examples');
+
     Route::get('/dashboard/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
 
     Route::post('/dashboard/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
@@ -200,13 +202,6 @@ EOT;
      */
     protected function controller($name)
     {
-        $path = app_path("Http/Controllers/Admin/{$name}Controller.php");
-
-        $dir = app_path('Http/Controllers/Admin');
-        if (!File::exists($dir)) {
-            File::makeDirectory($dir, 0755, true, true);
-        }
-
         $template = str_replace(
             [
                 '{{modelName}}',
@@ -219,7 +214,13 @@ EOT;
             $this->getStub('CommandController')
         );
 
-        file_put_contents($path, $template);
+        $controllerPath = app_path("/Http/Controllers/Admin");
+
+        if (!file_exists($controllerPath)) {
+            mkdir($controllerPath, 0755, true);
+        }
+
+        file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
     }
 
     /**
