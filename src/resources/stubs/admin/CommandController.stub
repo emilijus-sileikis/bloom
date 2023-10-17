@@ -5,11 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CommandController extends Controller
 {
     public function index()
+    {
+        return view('admin.index');
+    }
+
+    public function commands()
     {
         $commands = $this->getCommandsAndDescriptions();
 
@@ -61,6 +68,131 @@ class CommandController extends Controller
         }
 
          else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
+    }
+
+    public function createdCruds()
+    {
+        // Tables to exclude from the display
+        $excludedTables = ['migrations', 'password_resets', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens'];
+
+        // Retrieve the list of tables in the database, excluding the specified tables
+        $tables = DB::select("SHOW TABLES");
+
+        // Extract table names from the result set
+        $filteredTables = array_column($tables, "Tables_in_" . config('database.connections.mysql.database'));
+
+        // Filter out excluded tables
+        $filteredTables = array_diff($filteredTables, $excludedTables);
+
+        $tableInfo = [];
+
+        foreach ($filteredTables as $table) {
+            $rows = DB::table($table)->count();
+            $tableInfo[] = [
+                'name' => $table,
+                'rows' => $rows,
+            ];
+        }
+
+        // Pass the filtered tables to the view
+        return view('admin.cruds', compact('tableInfo'));
+    }
+
+    public function showTableData($tableName)
+    {
+        $tableData = DB::table($tableName)->get();
+
+        $tableColumns = Schema::getColumnListing($tableName);
+
+        return view('admin.cruds-data', compact('tableData', 'tableName', 'tableColumns'));
+    }
+
+    public function entryEdit($tableName, $id)
+    {
+        if ($tableName === 'users') {
+            $userRole = DB::table($tableName)
+                ->where('id', $id)
+                ->select('is_admin')
+                ->first();
+
+            if ($userRole->is_admin === 1) {
+                return redirect()->back()->with('error', "You cannot delete users from this page.");
+            }
+        }
+
+        $entry = DB::table($tableName)->where('id', $id)->first();
+
+        $tableColumns = Schema::getColumnListing($tableName);
+
+        $excludeColumns = ['id', 'password', 'remember_token'];
+
+        $editableColumns = array_diff($tableColumns, $excludeColumns);
+
+        return view('admin.entry-edit', compact('tableName', 'editableColumns', 'entry'));
+    }
+
+    public function entryUpdate(Request $request, $tableName, $id)
+    {
+        // Validate the input data here if needed
+
+        // Define an associative array to store the updated column-value pairs
+        $data = [];
+
+        // Loop through the editable columns and retrieve the updated values from the request
+        $editableColumns = array_diff(Schema::getColumnListing($tableName), ['id', 'password', 'remember_token']);
+
+        foreach ($editableColumns as $column) {
+            $data[$column] = $request->input($column);
+        }
+
+        // Update the entry in the specified table based on the ID
+        DB::table($tableName)->where('id', $id)->update($data);
+
+        // Redirect back to the table data view or wherever you want
+        return redirect()->back();
+    }
+
+    public function entryDelete($tableName, $id)
+    {
+        if (auth()->user()->is_admin === 0) {
+            return redirect()->back()->with('error', "You cannot delete entries from this page.");
+        }
+
+        if ($tableName === 'users') {
+            $userRole = DB::table($tableName)
+                ->where('id', $id)
+                ->select('is_admin')
+                ->first();
+
+            if ($userRole->is_admin === 1) {
+                return redirect()->back()->with('error', "You cannot delete users from this page.");
+            }
+        }
+
+        DB::table($tableName)->where('id', $id)->delete();
+
+        return redirect()->back();
+    }
+
+    public function tableDelete($tableName)
+    {
+        if (auth()->user()->is_admin === 0) {
+            return redirect()->back()->with('error', "You cannot delete tables from this page.");
+        }
+
+        if (Schema::hasTable($tableName)) {
+            Schema::dropIfExists($tableName);
+        }
+
+        $table = ucfirst(Str::singular($tableName));
+        $commandName = 'bloom:delete';
+        $request = new Request([
+            'crudName' => $table,
+        ]);
+
+        $this->execute($commandName, $request);
+
+        return redirect()->back();
     }
 
     private function getCommandsAndDescriptions($specificCommand = null)

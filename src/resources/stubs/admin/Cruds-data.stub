@@ -1,0 +1,84 @@
+@extends('admin.dashboard')
+
+@section('content')
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Data For: {{ $tableName }}</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item active"><a href="/dashboard/cruds" style="text-decoration: none;">Cruds</a> / {{ $tableName }}</li>
+        </ol>
+        <div class="content">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    {{ $tableName }}
+                </div>
+                <div class="card-body">
+                    <table id="datatablesSimple">
+                        <thead>
+                        <tr>
+                            @foreach ($tableColumns as $column)
+                                @if ($column !== 'password')
+                                    <th>{{ $column }}</th>
+                                @endif
+                            @endforeach
+                            <th>Edit</th>
+                            <th>Delete</th>
+                        </tr>
+                        </thead>
+                        <tfoot>
+                        <tr>
+                            @foreach ($tableColumns as $column)
+                                @if ($column !== 'password')
+                                    <th>{{ $column }}</th>
+                                @endif
+                            @endforeach
+                            <th>Edit</th>
+                            <th>Delete</th>
+                        </tr>
+                        </tfoot>
+                        <tbody>
+                        @foreach ($tableData as $row)
+
+                            <tr>
+                                @foreach ($tableColumns as $column)
+                                    @if ($column !== 'password')
+                                        <td>{{ $row->$column }}</td>
+                                    @endif
+                                @endforeach
+                                <td>
+                                    @if($column === "is_admin" && $row->is_admin === 1)
+                                        <a href="{{ route('entry.edit', ['tableName' => $tableName, 'id' => $row->id]) }}" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
+                                    @else
+                                        <a href="{{ route('entry.edit', ['tableName' => $tableName, 'id' => $row->id]) }}" class="btn btn-info">Edit</a>
+                                    @endif
+                                </td>
+                                <td>
+                                    <form action="{{ route('entry.delete', ['tableName' => $tableName, 'id' => $row->id]) }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="_method" value="PUT">
+                                        @if($column === "is_admin" && $row->is_admin === 1)
+                                            <button type="submit" class="btn btn-danger" style="pointer-events: none; opacity: 0.5;" onClick="return confirmSubmit()">Delete</button>
+                                        @else
+                                            <button type="submit" class="btn btn-danger" onClick="return confirmSubmit()">Delete</button>
+                                        @endif
+                                    </form>
+                                </td>
+                            </tr>
+
+                        @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function confirmSubmit()
+        {
+            return confirm("Are you sure you want to delete this item?");
+        }
+    </script>
+
+@endsection

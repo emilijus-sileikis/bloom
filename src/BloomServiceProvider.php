@@ -26,9 +26,9 @@ class BloomServiceProvider extends ServiceProvider
 
         // Publish stub files, commands, and assets to the project
         $this->publishes([
-            __DIR__ . '/../resources/stubs' => resource_path('stubs'),
-            __DIR__ . '/../Commands' => app_path('Console/Commands'),
-            __DIR__ . '/../resources/public' => public_path('/'),
+            __DIR__ . '/resources/stubs' => resource_path('stubs'),
+            __DIR__ . '/Commands' => app_path('Console/Commands'),
+            __DIR__ . '/resources/public' => public_path('/'),
         ], $publishTag);
     }
 

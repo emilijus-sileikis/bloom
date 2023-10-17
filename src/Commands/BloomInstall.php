@@ -157,29 +157,38 @@ EOT;
         $routesPath = base_path('routes/web.php');
         $routesContents = file_get_contents($routesPath);
 
-        // Replace 'verified' middleware with 'admin' middleware
+        // Replace the dashboard route
         $updatedRoutesContents = str_replace(
-            "->middleware(['auth', 'verified'])",
-            "->middleware(['auth', 'admin'])",
+            "Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');",
+            "Route::get('/dashboard', [App\Http\Controllers\Admin\CommandController::class, 'index'])
+    ->middleware(['auth', 'admin'])
+    ->name('dashboard');",
             $routesContents
-        );
-
-        // Replace 'return view('dashboard');' with 'return view('admin/dashboard');'
-        $updatedRoutesContents = str_replace(
-            "return view('dashboard');",
-            "return view('admin/index');",
-            $updatedRoutesContents
         );
 
         // Append the new routes
         $newRoutes = "
-    Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
+    Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'commands'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
 
     Route::get('/dashboard/examples', [App\Http\Controllers\Admin\CommandController::class, 'examples'])->middleware(['auth', 'admin'])->name('dashboard.examples');
 
     Route::get('/dashboard/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
 
     Route::post('/dashboard/commands/execute/{command}', [App\Http\Controllers\Admin\CommandController::class, 'execute'])->middleware(['auth', 'admin'])->name('dashboard.commands.execute');
+
+    Route::get('/dashboard/cruds/', [App\Http\Controllers\Admin\CommandController::class, 'createdCruds'])->middleware(['auth', 'admin'])->name('dashboard.cruds.index');
+
+    Route::get('/dashboard/cruds/{tableName}', [App\Http\Controllers\Admin\CommandController::class, 'showTableData'])->middleware(['auth', 'admin'])->name('dashboard.cruds.data');
+
+    Route::get('/dashboard/{tableName}/edit/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryEdit'])->middleware(['auth', 'admin'])->name('entry.edit');
+
+    Route::put('/dashboard/{tableName}/update/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryUpdate'])->middleware(['auth', 'admin'])->name('entry.update');
+
+    Route::put('/dashboard/{tableName}/delete/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryDelete'])->middleware(['auth', 'admin'])->name('entry.delete');
+
+    Route::put('/dashboard/{tableName}/delete', [App\Http\Controllers\Admin\CommandController::class, 'tableDelete'])->middleware(['auth', 'admin'])->name('table.delete');
     ";
 
         $updatedRoutesContents .= $newRoutes;
@@ -214,10 +223,10 @@ EOT;
             $this->getStub('CommandController')
         );
 
-        $controllerPath = app_path("/Http/Controllers/Admin");
+        $controllersPath = app_path('Http/Controllers/Admin');
 
-        if (!file_exists($controllerPath)) {
-            mkdir($controllerPath, 0755, true);
+        if (!file_exists($controllersPath)) {
+            mkdir($controllersPath, 0755, true);
         }
 
         file_put_contents(app_path("/Http/Controllers/Admin/{$name}Controller.php"), $template);
@@ -235,6 +244,9 @@ EOT;
         $footer = $this->getStub('Footer');
         $commands = $this->getStub('Commands');
         $details = $this->getStub('Command-details');
+        $cruds = $this->getStub('Cruds');
+        $crudData = $this->getStub('Cruds-data');
+        $entry = $this->getStub('Entry-edit');
 
         $viewsPath = resource_path("views/admin");
 
@@ -249,6 +261,9 @@ EOT;
         file_put_contents(resource_path("views/admin/footer.blade.php"), $footer);
         file_put_contents(resource_path("views/admin/commands.blade.php"), $commands);
         file_put_contents(resource_path("views/admin/command-details.blade.php"), $details);
+        file_put_contents(resource_path("views/admin/cruds.blade.php"), $cruds);
+        file_put_contents(resource_path("views/admin/cruds-data.blade.php"), $crudData);
+        file_put_contents(resource_path("views/admin/entry-edit.blade.php"), $entry);
     }
 
     /**

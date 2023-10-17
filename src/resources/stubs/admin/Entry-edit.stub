@@ -1,0 +1,31 @@
+@extends('admin.dashboard')
+
+@section('content')
+
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Edit Entry: ({{ $entry->name }}) in Table: ({{ $tableName }})</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item active"><a href="/dashboard/cruds/{{ $tableName }}" style="text-decoration: none;">{{ $tableName }}</a> / {{ $entry->name }}</li>
+        </ol>
+        <div class="content">
+            <form action="{{ route('entry.update', ['tableName' => $tableName, 'id' => $entry->id]) }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="row">
+                    @foreach($editableColumns as $column)
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ $column }}">{{ $column }}:</label>
+                                <input type="text" name="{{ $column }}" id="{{ $column }}" value="{{ $entry->$column }}" class="form-control">
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-5">Update Entry</button>
+            </form>
+        </div>
+    </div>
+
+@endsection
