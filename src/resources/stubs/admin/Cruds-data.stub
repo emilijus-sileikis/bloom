@@ -6,6 +6,32 @@
         <ol class="breadcrumb mb-4">
             <li class="breadcrumb-item active"><a href="/dashboard/cruds" style="text-decoration: none;">Cruds</a> / {{ $tableName }}</li>
         </ol>
+        <div class="row mb-2">
+            @if (session('status'))
+                <div class="alert alert-success mt-4">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-danger mt-4">
+                    {{ session('error') }}
+                </div>
+            @endif
+        </div>
+
+        @if($tableName !== 'users' && Route::has("{$tableName}.create"))
+            <h4>Want to create new entries?</h4>
+            <p>Click the button below to create one.</p>
+
+            <form action="{{ route("{$tableName}.create") }}" method="GET">
+                <button type="submit" class="btn mb-3 btn-primary">Create</button>
+            </form>
+        @else
+            <p>You can't create entries for this table. <br>
+            This model was either not created by you or is a pivot table.</p>
+        @endif
+
         <div class="content">
             <div class="card mb-4">
                 <div class="card-header">
@@ -47,9 +73,9 @@
                                 @endforeach
                                 <td>
                                     @if($column === "is_admin" && $row->is_admin === 1)
-                                        <a href="{{ route('entry.edit', ['tableName' => $tableName, 'id' => $row->id]) }}" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
+                                        <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
                                     @else
-                                        <a href="{{ route('entry.edit', ['tableName' => $tableName, 'id' => $row->id]) }}" class="btn btn-info">Edit</a>
+                                        <a href="{{ route("{$tableName}.edit", [$tableNameSingular => $row->id]) }}" class="btn btn-info">Edit</a>
                                     @endif
                                 </td>
                                 <td>
@@ -57,7 +83,7 @@
                                         @csrf
                                         <input type="hidden" name="_method" value="PUT">
                                         @if($column === "is_admin" && $row->is_admin === 1)
-                                            <button type="submit" class="btn btn-danger" style="pointer-events: none; opacity: 0.5;" onClick="return confirmSubmit()">Delete</button>
+                                            <button class="btn btn-danger" style="pointer-events: none; opacity: 0.5;" onClick="return confirmSubmit()">Delete</button>
                                         @else
                                             <button type="submit" class="btn btn-danger" onClick="return confirmSubmit()">Delete</button>
                                         @endif

@@ -3,10 +3,23 @@
 @section('content')
 
     <div class="container-fluid px-4">
-        <h1 class="mt-4">Edit Entry: ({{ $entry->name }}) in Table: ({{ $tableName }})</h1>
+        <h1 class="mt-4">Edit Entry: (ID: {{ $entry->id }}) in Table: ({{ $tableName }})</h1>
         <ol class="breadcrumb mb-4">
-            <li class="breadcrumb-item active"><a href="/dashboard/cruds/{{ $tableName }}" style="text-decoration: none;">{{ $tableName }}</a> / {{ $entry->name }}</li>
+            <li class="breadcrumb-item active"><a href="/dashboard/cruds/{{ $tableName }}" style="text-decoration: none;">{{ $tableName }}</a> / {{ $entry->id }}</li>
         </ol>
+        <div class="row mb-2">
+            @if (session('status'))
+                <div class="alert alert-success mt-4">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-danger mt-4">
+                    {{ session('error') }}
+                </div>
+            @endif
+        </div>
         <div class="content">
             <form action="{{ route('entry.update', ['tableName' => $tableName, 'id' => $entry->id]) }}" method="POST">
                 @csrf

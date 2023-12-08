@@ -12,11 +12,12 @@ class {{migrationClassName}} extends Migration
     public function up()
     {
         Schema::create('{{pivotTableName}}', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('{{tableName1}}_id');
-            $table->foreign('{{tableName1}}_id')->references('id')->on('{{tableName1}}s')->onDelete('cascade');
+            $table->foreign('{{tableName1}}_id')->references('id')->on('{{table1Plural}}')->onDelete('cascade');
 
             $table->unsignedBigInteger('{{tableName2}}_id');
-            $table->foreign('{{tableName2}}_id')->references('id')->on('{{tableName2}}s')->onDelete('cascade');
+            $table->foreign('{{tableName2}}_id')->references('id')->on('{{table2Plural}}')->onDelete('cascade');
 
             $table->timestamps();
 

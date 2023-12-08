@@ -12,10 +12,6 @@ window.addEventListener('DOMContentLoaded', event => {
     // Toggle the side navigation
     const sidebarToggle = document.body.querySelector('#sidebarToggle');
     if (sidebarToggle) {
-        // Uncomment Below to persist sidebar toggle between refreshes
-        // if (localStorage.getItem('sb|sidebar-toggle') === 'true') {
-        //     document.body.classList.toggle('sb-sidenav-toggled');
-        // }
         sidebarToggle.addEventListener('click', event => {
             event.preventDefault();
             document.body.classList.toggle('sb-sidenav-toggled');
@@ -23,4 +19,16 @@ window.addEventListener('DOMContentLoaded', event => {
         });
     }
 
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Remove the alerts after 6 seconds
+    const alertMessage = document.querySelectorAll('.alert');
+
+    if (alertMessage.length > 0) {
+        setTimeout(function() {
+            alertMessage.forEach(div => div.style.display = 'none');
+        }, 6000);
+    }
 });

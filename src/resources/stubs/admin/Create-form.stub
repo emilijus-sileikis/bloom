@@ -1,0 +1,157 @@
+@extends('admin.dashboard')
+
+@section('content')
+    <main>
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Create {{ $entityName }}</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="/dashboard/cruds/{{ $entityName }}s" style="text-decoration: none;">{{ $entityName }}s</a></li>
+                <li class="breadcrumb-item active">create</li>
+            </ol>
+
+            <div class="row">
+                @if (session('status'))
+                    <div class="alert alert-success mt-4">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="alert alert-danger mt-4">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('{{ $entityNamePlural }}.store') }}" enctype="multipart/form-data">
+                                @csrf
+                                @foreach ($inputFieldTypes as $field => $type)
+                                    @if($field !== 'id')
+                                        <div class="form-group">
+                                            <label for="{{ $field }}">{{ ucfirst($field) }}:</label>
+                                            @if($field === "user_id" && $type !== 'file')
+                                                <select class="form-control mb-3" name="{{ $field }}">
+                                                    @foreach($users as $related)
+                                                        <option value="{{ $related->id }}">
+                                                            {{ $related->name ?? $related->title ?? $related }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($type === 'textarea')
+                                                <textarea id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                          @if(isset($maxRules[$field]))
+                                                              maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                                          @endif
+                                                          @if(isset($minRules[$field]))
+                                                              minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                                          @endif
+                                                          @if(isset($requiredRules[$field]))
+                                                              required
+                                                           @endif
+                                                ></textarea>
+                                            @elseif ($type === 'checkbox')
+                                                <input type="hidden" name="{{ $field }}" value="0">
+                                                <input class="mb-3" type="checkbox" id="{{ $field }}" name="{{ $field }}" value="1" {{ old($field) ? 'checked' : '' }}>
+                                            @elseif ($type === 'date')
+                                                <input type="date" id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif ($type === 'datetime-local')
+                                                <input type="datetime-local" id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif ($type === 'time')
+                                                <input type="time" id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif ($type === 'number')
+                                                <input type="number" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3"
+                                                       @if(isset($maxRules[$field]))
+                                                           max="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           min="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif($type === 'file')
+                                                <input class="form-control mb-3" type="file" name="{{ $field }}"
+                                                       @if(isset($maxRules[$field]))
+                                                           maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif (isset($flags[$field]['isImage']) && $flags[$field]['isImage'] === true)
+                                                <input class="form-control mb-3" type="file" name="{{ $field }}"
+                                                       @if(isset($maxRules[$field]))
+                                                           maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @else
+                                                <input type="{{ $type }}" id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                       @if(isset($maxRules[$field]))
+                                                           maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @endif
+                                        </div>
+                                    @endif
+                                @endforeach
+
+                                {{ $relatedSelect }}
+
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <script>
+                document.querySelectorAll('.users option').forEach(function(option) {
+                    option.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        var originalScrollTop = this.parentNode.scrollTop;
+                        this.selected = !this.selected;
+                        var self = this;
+                        this.parentNode.focus();
+                        this.parentNode.click();
+                        setTimeout(function() {
+                            self.parentNode.scrollTop = originalScrollTop;
+                        }, 0);
+
+                        return false;
+                    });
+                });
+            </script>
+
+    </main>
+@endsection

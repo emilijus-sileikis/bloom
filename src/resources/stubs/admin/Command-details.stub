@@ -31,37 +31,74 @@
                                     @csrf
                                     <div class="form-group">
                                         <div class="h4">Arguments</div>
-                                        <label for="crudName">Name (max 30 char.):</label>
+                                        <label for="crudName">Name (e.g. Post):</label>
                                         <input type="text" class="form-control mb-2" id="crudName" name="crudName" maxlength="30" required>
+
+                                        <label for="dropTable">Check if you want to drop related tables on CRUD deletion:</label>
+                                        <input type="checkbox" id="dropTable" name="dropTable" style="width: 22px; height: 22px; vertical-align: middle;">
+
+                                        <div id="pivot" style="display: none;">
+                                            <label for="pivotTable">Pivot table name (for N:M relations only!) (e.g. post_user):</label>
+                                            <input type="text" class="form-control mb-3" id="pivotTable" name="pivotTable" maxlength="30">
+                                        </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Execute Command</button>
+                                    <button type="submit" class="btn btn-primary mt-2">Execute Command</button>
                                 </form>
+
+                                <script>
+                                    // Show/hide table deletion fields based on checkbox state
+                                    var tableCheckbox = document.getElementById('dropTable');
+                                    var pivotField = document.getElementById('pivot');
+
+                                    tableCheckbox.addEventListener('change', function() {
+                                        if (tableCheckbox.checked) {
+                                            pivotField.style.display = 'block';
+                                        } else {
+                                            pivotField.style.display = 'none';
+                                        }
+                                    });
+                                </script>
+
                             @elseif ($commandName == 'bloom:create')
                                 <form method="POST" action="{{ route('dashboard.commands.execute', ['command' => $commandName]) }}" id="bloomCreateForm">
                                     @csrf
                                     <div class="form-group mb-5">
                                         <div class="h4">Arguments</div>
-                                        <label for="crudName">Name (max 30 char.):</label>
+                                        <label for="crudName">Name (e.g. Post):</label>
                                         <input type="text" class="form-control mb-2" id="crudName" name="crudName" maxlength="30" required>
 
-                                        <label for="modelAttributes">Model Attributes (comma-separated):</label>
+                                        <label for="modelAttributes">Model Attributes (e.g. title:string|required|max:30, image:binary|max:24000):</label>
                                         <input type="text" class="form-control mb-2" id="modelAttributes" name="modelAttributes" required>
 
-                                        <label for="relatedModelCheckbox">Related Model: </label>
-                                        <input type="checkbox" class="form-check-input" id="relatedModelCheckbox">
-                                        <label class="form-check-label" for="relatedModelCheckbox">Check if You want to create a relation between models</label>
+                                        <label for="createView">Check if you want to create views for the regular user (index, show):</label>
+                                        <input type="checkbox" id="createView" name="createView" style="width: 22px; height: 22px; vertical-align: middle;"> <br><br>
 
-                                        <div id="relatedModelFields" style="display: none;">
-                                            <label for="relatedModel">Related Model Name (max 30 char.):</label>
-                                            <input type="text" class="form-control mb-2" id="relatedModel" name="relatedModel" maxlength="30">
+                                        <label for="relatedModelCheckbox">Check if you want to create a relation between models:</label>
+                                        <input type="checkbox" id="relatedModelCheckbox" name="relatedModelCheckbox" style="width: 22px; height: 22px; vertical-align: middle;">
+
+                                        <div id="hidden" class="mt-2" style="display: none;">
+                                            <label for="relatedModel">Related Model:</label>
+                                            <select name="relatedModel" id="relatedModel" class="form-control mb-2" onchange="updateSelectedOptions()">
+                                                <option value="">Select a model</option>
+
+                                                @foreach($allModels as $model)
+                                                    <option value="{{ $model }}">{{ $model }}</option>
+                                                @endforeach
+
+                                            </select>
                                             <label for="relationshipType">Relationship Type:</label>
-                                            <select class="form-control mb-2" id="relationshipType" name="relationshipType">
+                                            <select class="form-control mb-2" id="relationshipType" name="relationshipType" onchange="updateSelectedOptions()">
                                                 <option value="hasOne">1:1</option>
                                                 <option value="hasMany">1:N</option>
                                                 <option value="belongsTo">N:1</option>
                                                 <option value="belongsToMany">N:M</option>
                                             </select>
+
+                                            <div id="selectedOptions" style="display: none;">
+                                                <p id="selectedRelation"></p>
+                                            </div>
                                         </div>
+
                                     </div>
                                     <button type="submit" class="btn btn-primary">Execute Command</button>
                                 </form>
@@ -69,7 +106,7 @@
                                 <script>
                                     // Show/hide related model fields based on checkbox state
                                     var relatedModelCheckbox = document.getElementById('relatedModelCheckbox');
-                                    var relatedModelFields = document.getElementById('relatedModelFields');
+                                    var relatedModelFields = document.getElementById('hidden');
 
                                     relatedModelCheckbox.addEventListener('change', function() {
                                         if (relatedModelCheckbox.checked) {
@@ -88,6 +125,31 @@
                                             alert('Related Model Name is required when the checkbox is checked.');
                                         }
                                     });
+                                </script>
+
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function () {
+                                        updateSelectedOptions();
+                                    });
+
+                                    function updateSelectedOptions() {
+                                        // Get selected values
+                                        var selectedModel = document.getElementById('relatedModel').value;
+                                        var selectedRelationship = document.getElementById('relationshipType').value;
+                                        var crudName = document.getElementById('crudName').value;
+
+                                        // Update display div
+                                        var selectedRelationElement = document.getElementById('selectedRelation');
+                                        var selectedOptionsDiv = document.getElementById('selectedOptions');
+
+                                        if (selectedModel && selectedRelationship && crudName) {
+                                            selectedRelationElement.textContent = 'Your selected relation: ' + crudName + ' ' + selectedRelationship + ' ' + selectedModel;
+                                            selectedOptionsDiv.style.display = 'block';
+                                            selectedOptionsDiv.style.color = 'green';
+                                        } else {
+                                            selectedOptionsDiv.style.display = 'none';
+                                        }
+                                    }
                                 </script>
                             @endif
                         </div>

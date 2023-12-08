@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -19,7 +18,9 @@ class BloomInstall extends Command
      *
      * @var string
      */
-    protected $signature = 'bloom:install';
+    protected $signature = 'bloom:install
+        {--create-admin : Creates a new admin user.}
+        {--update-user-table : Updates the User table and adds \'is_admin\' column (Use if the database was refreshed).}';
 
     /**
      * The console command description.
@@ -33,17 +34,30 @@ class BloomInstall extends Command
      */
     public function handle()
     {
-        $this->setupBreeze();
 
-        $this->updateUserTable();
+        if ($this->option('create-admin') && $this->option('update-user-table')) {
+            $this->updateUserTable();
+            $this->createAdmin();
+            $this->info('Table updated successfully and a new admin user was created.');
+        } else if ($this->option('create-admin')) {
+            $this->createAdmin();
+            $this->info('Admin user created successfully.');
+        } else if ($this->option('update-user-table')) {
+            $this->updateUserTable();
+            $this->info('User table updated successfully.');
+        } else {
+            $this->setupBreeze();
 
-        $this->createAdmin();
+            $this->updateUserTable();
 
-        $this->registerMiddleware();
+            $this->createAdmin();
 
-        $this->createDashboard('Dashboard');
+            $this->registerMiddleware();
 
-        $this->info('Bloom admin dashboard and admin user installed successfully.');
+            $this->createDashboard('Dashboard');
+
+            $this->info('Bloom admin dashboard and admin user installed successfully.');
+        }
     }
 
     /**
@@ -94,7 +108,7 @@ class BloomInstall extends Command
         if (!strpos($userModelContents, "'is_admin'")) {
             $fillableCode = <<<'EOT'
 
-    'is_admin', // Add 'is_admin' to the fillable fields
+    'is_admin',
 EOT;
             // Append 'is_admin' to $fillable
             file_put_contents($userModelPath, str_replace("'password',", "'password',\n" . $fillableCode, $userModelContents));
@@ -160,8 +174,8 @@ EOT;
         // Replace the dashboard route
         $updatedRoutesContents = str_replace(
             "Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');",
+    return view('admin.index');
+})->middleware(['auth', 'admin'])->name('dashboard');",
             "Route::get('/dashboard', [App\Http\Controllers\Admin\CommandController::class, 'index'])
     ->middleware(['auth', 'admin'])
     ->name('dashboard');",
@@ -173,6 +187,8 @@ EOT;
     Route::get('/dashboard/commands', [App\Http\Controllers\Admin\CommandController::class, 'commands'])->middleware(['auth', 'admin'])->name('dashboard.commands.index');
 
     Route::get('/dashboard/examples', [App\Http\Controllers\Admin\CommandController::class, 'examples'])->middleware(['auth', 'admin'])->name('dashboard.examples');
+
+    Route::put('/dashboard/migrate', [App\Http\Controllers\Admin\CommandController::class, 'migrate'])->middleware(['auth', 'admin'])->name('dashboard.migrate');
 
     Route::get('/dashboard/commands/{command}', [App\Http\Controllers\Admin\CommandController::class, 'show'])->middleware(['auth', 'admin'])->name('dashboard.commands.show');
 

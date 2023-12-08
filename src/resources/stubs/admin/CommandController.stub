@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +26,12 @@ class CommandController extends Controller
 
     public function show($commandName)
     {
+
+        $modelPath = app_path('/Models');
+        $allModels = $this->getAllModels($modelPath);
         $commandDescription = $this->getCommandsAndDescriptions($commandName);
 
-        return view('admin.command-details', compact('commandName', 'commandDescription'));
+        return view('admin.command-details', compact('commandName', 'commandDescription', 'allModels'));
     }
 
     public function examples()
@@ -35,11 +39,14 @@ class CommandController extends Controller
         return view('admin.examples');
     }
 
-    public function execute($commandName, Request $request)
+    protected function execute($commandName, Request $request, $fromList = false)
     {
         // Validation
         $request->validate([
             'crudName' => 'required|string|max:30',
+            'relatedModel' => 'nullable|string|max:30',
+            'modelAttributes' => 'nullable|string|max:255',
+            'relationshipType' => 'nullable|string|max:15',
         ]);
 
         $crudName = $request->input('crudName');
@@ -48,29 +55,44 @@ class CommandController extends Controller
 
             $fullCommand = "$commandName $crudName";
 
-            return $this->commandCall($fullCommand, $crudName);
+            if ($request->input('dropTable')) {
+                $fullCommand = "$commandName $crudName --drop-table";
+
+                if ($request->input('pivotTable')) {
+                    $pivotTable = $request->input('pivotTable');
+                    $fullCommand .= " --pivot-table=$pivotTable";
+                }
+            }
+
+            return $this->commandCall($fullCommand, $crudName, $fromList);
         }
 
         if ($commandName === 'bloom:create') {
             $relatedModel = $request->input('relatedModel');
             $modelAttributes = $request->input('modelAttributes');
             $relationshipType = $request->input('relationshipType');
+            $createViews = $request->input('createView');
+
+            if ($createViews) {
+                $viewOption = ' --create-view';
+            } else {
+                $viewOption = '';
+            }
 
             if (!empty($relatedModel) && !empty($relationshipType)) {
                 config(['command_from_frontend' => true]);
-                $fullCommand = "$commandName $crudName \"$modelAttributes\" --related-model=$relatedModel --relation-type=$relationshipType --skip-relationships";
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --related-model=$relatedModel --relation-type=$relationshipType --skip-relationships" . $viewOption;
 
             } else {
-                $fullCommand = "$commandName $crudName \"$modelAttributes\" --skip-relationships";
-
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --skip-relationships" . $viewOption;
             }
-            return $this->commandCall($fullCommand, $crudName);
+            return $this->commandCall($fullCommand, $crudName, $fromList);
         }
 
          else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
     }
 
-    public function createdCruds()
+    protected function createdCruds()
     {
         // Tables to exclude from the display
         $excludedTables = ['migrations', 'password_resets', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens'];
@@ -94,65 +116,21 @@ class CommandController extends Controller
             ];
         }
 
-        // Pass the filtered tables to the view
         return view('admin.cruds', compact('tableInfo'));
     }
 
-    public function showTableData($tableName)
+    protected function showTableData($tableName)
     {
         $tableData = DB::table($tableName)->get();
 
         $tableColumns = Schema::getColumnListing($tableName);
 
-        return view('admin.cruds-data', compact('tableData', 'tableName', 'tableColumns'));
+        $tableNameSingular = Str::singular($tableName);
+
+        return view('admin.cruds-data', compact('tableData', 'tableName', 'tableColumns', 'tableNameSingular'));
     }
 
-    public function entryEdit($tableName, $id)
-    {
-        if ($tableName === 'users') {
-            $userRole = DB::table($tableName)
-                ->where('id', $id)
-                ->select('is_admin')
-                ->first();
-
-            if ($userRole->is_admin === 1) {
-                return redirect()->back()->with('error', "You cannot delete users from this page.");
-            }
-        }
-
-        $entry = DB::table($tableName)->where('id', $id)->first();
-
-        $tableColumns = Schema::getColumnListing($tableName);
-
-        $excludeColumns = ['id', 'password', 'remember_token'];
-
-        $editableColumns = array_diff($tableColumns, $excludeColumns);
-
-        return view('admin.entry-edit', compact('tableName', 'editableColumns', 'entry'));
-    }
-
-    public function entryUpdate(Request $request, $tableName, $id)
-    {
-        // Validate the input data here if needed
-
-        // Define an associative array to store the updated column-value pairs
-        $data = [];
-
-        // Loop through the editable columns and retrieve the updated values from the request
-        $editableColumns = array_diff(Schema::getColumnListing($tableName), ['id', 'password', 'remember_token']);
-
-        foreach ($editableColumns as $column) {
-            $data[$column] = $request->input($column);
-        }
-
-        // Update the entry in the specified table based on the ID
-        DB::table($tableName)->where('id', $id)->update($data);
-
-        // Redirect back to the table data view or wherever you want
-        return redirect()->back();
-    }
-
-    public function entryDelete($tableName, $id)
+    protected function entryDelete($tableName, $id)
     {
         if (auth()->user()->is_admin === 0) {
             return redirect()->back()->with('error', "You cannot delete entries from this page.");
@@ -171,17 +149,13 @@ class CommandController extends Controller
 
         DB::table($tableName)->where('id', $id)->delete();
 
-        return redirect()->back();
+        return redirect()->back()->with('status', "Entry deleted successfully.");
     }
 
-    public function tableDelete($tableName)
+    protected function tableDelete($tableName)
     {
         if (auth()->user()->is_admin === 0) {
             return redirect()->back()->with('error', "You cannot delete tables from this page.");
-        }
-
-        if (Schema::hasTable($tableName)) {
-            Schema::dropIfExists($tableName);
         }
 
         $table = ucfirst(Str::singular($tableName));
@@ -190,9 +164,39 @@ class CommandController extends Controller
             'crudName' => $table,
         ]);
 
-        $this->execute($commandName, $request);
+        $this->execute($commandName, $request, true);
 
-        return redirect()->back();
+        if (Schema::hasTable($tableName)) {
+            try {
+                Schema::dropIfExists($tableName);
+            } catch (QueryException $e) {
+                if ($e->errorInfo[0] === '23000') {
+                    return redirect()->back()->with('error', "Cannot delete entry because it has foreign keys. Please delete the related entries first.");
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        Artisan::call('route:clear');
+
+        return redirect()->back()->with('status', "Table ({$tableName}) deleted successfully.");
+    }
+
+    protected function migrate()
+    {
+        Artisan::call('migrate');
+        $output = Artisan::output();
+
+        if (str_contains($output, 'Error:')) {
+            return redirect()->back()->with('error', "Command execution failed: {$output}");
+        } else if (str_contains($output, 'Nothing to migrate.')) {
+            return redirect()->back()->with('error', "Nothing to migrate.");
+        } else {
+            Artisan::call('route:clear');
+            return redirect()->back()->with('status', "Command executed successfully: {$output}");
+        }
+
     }
 
     private function getCommandsAndDescriptions($specificCommand = null)
@@ -229,23 +233,54 @@ class CommandController extends Controller
         return $specificCommand ? 'Command not found.' : $commandsWithDescriptions;
     }
 
-    public function commandCall(string $fullCommand, mixed $crudName)
+    private function getAllModels($path)
+    {
+        $models = [];
+        $modelsResults = scandir($path);
+
+        foreach ($modelsResults as $model) {
+            if ($model === '.' || $model === '..') continue;
+
+            $name = $model;
+
+            if (is_dir($path . '/' . $name)) {
+                $models = array_merge($models, $this->getAllModels(app_path('/Models/' . $name)));
+            } else {
+                $models[] = substr($name, 0, -4);
+            }
+        }
+        return $models;
+    }
+
+    public function commandCall($fullCommand, $crudName, $fromList)
     {
         Artisan::call($fullCommand);
 
         $output = Artisan::output();
 
-        // Check if the command was executed successfully
-        if (str_starts_with($output, 'ERROR 1:')) {
-            return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
-        } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
-            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
-        } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
-            return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
-        } elseif (str_starts_with($output, 'ERROR 2:')) {
-            return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+        if ($fromList) {
+            return $output;
         } else {
-            return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+            // Check if the command was executed successfully
+            if (str_starts_with($output, 'ERROR 1:')) {
+                return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
+            } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
+                return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
+            } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
+                return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
+            } elseif (str_starts_with($output, 'ERROR 2:')) {
+                return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+            } elseif (str_starts_with($output, 'ERROR 4:')) {
+                return redirect()->back()->with('error', "The provided table does not exist.");
+            } elseif (str_starts_with($output, 'ERROR 5:')) {
+                return redirect()->back()->with('error', "The pivot table name is required.");
+            } elseif (str_starts_with($output, 'ERROR 6:')) {
+                return redirect()->back()->with('error', "The table provided pivot table does not exist in the database.");
+            } elseif (str_starts_with($output, 'ERROR 7:')) {
+                return redirect()->back()->with('error', $output);
+            } else {
+                return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+            }
         }
     }
 }

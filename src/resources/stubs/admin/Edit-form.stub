@@ -1,0 +1,179 @@
+@extends('admin.dashboard')
+
+@section('content')
+    <main>
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Edit {{ $entityName }}</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="/dashboard/cruds/{{ $entityName }}s" style="text-decoration: none;">{{ $entityName }}s</a></li>
+                <li class="breadcrumb-item active">edit</li>
+            </ol>
+
+            <div class="row">
+                @if (session('status'))
+                    <div class="alert alert-success mt-4">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="alert alert-danger mt-4">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('{{ $entityNamePlural }}.update', ${{ $entityName }}->id) }}" enctype="multipart/form-data">
+                                @csrf
+                                @method('PATCH')
+
+                                @foreach($fields as $field => $type)
+                                    <label for="{{ $field }}">{{ ucfirst($field) }}:</label>
+                                    @if($field === "related_model_id" && $type !== 'file')
+                                        <select class="form-control mb-3" name="{{ $field }}">
+                                            @foreach($related_models as $related)
+                                                <option value="{{ $related->id }}" {{ ${{ $entityName }}->$field == $related->id ? 'selected' : '' }}>
+                                                    {{ $related->name ?? $related->title ?? $related }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($type === 'textarea')
+                                        <textarea class="form-control mb-3" name="{{ $field }}"
+                                          @if(isset($maxRules[$field]))
+                                              maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                          @endif
+                                          @if(isset($minRules[$field]))
+                                              minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                          @endif
+                                          @if(isset($requiredRules[$field]))
+                                              required
+                                          @endif
+                                        >{{ ${{ $entityName }}->$field }}</textarea>
+                                    @elseif (isset($flags[$field]['isImage']) && $flags[$field]['isImage'] === true)
+                                        <br>
+                                        <button class="mb-3" type="button" onclick="showImageOverlay()">View Current Image</button>
+                                        <div id="imageOverlay" class="image-overlay">
+                                            <div class="overlay-content">
+                                                <span class="close-button" onclick="hideImageOverlay()">&times;</span>
+                                                <div class="image-container">
+                                                    <img src="{{ asset(${{ $entityName }}->$field) }}" alt="Current Image">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <br>
+                                        @if (${{ $entityName }}->$field)
+                                            <input type="hidden" name="{{ $field }}_old" value="{{ ${{ $entityName }}->$field }}">
+                                        @endif
+                                        <input class="form-control mb-3" type="file" name="{{ $field }}"
+                                           @if(isset($maxRules[$field]))
+                                               maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($minRules[$field]))
+                                               minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($requiredRules[$field]))
+                                               required
+                                           @endif
+                                        >
+                                    @elseif($type === 'file')
+                                        @if (is_string(${{ $entityName }}->$field))
+                                            <button class="mb-3" type="button" onclick="showImageOverlay()">View Current Image</button>
+
+                                            <div id="imageOverlay" class="image-overlay">
+                                                <div class="overlay-content">
+                                                    <span class="close-button" onclick="hideImageOverlay()">&times;</span>
+                                                    <div class="image-container">
+                                                        <img src="data:image/jpeg;base64,{{ base64_encode(${{ $entityName }}->$field) }}" alt="Current Image">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                        <input class="form-control mb-3" type="file" name="{{ $field }}"
+                                           @if(isset($maxRules[$field]))
+                                               maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($minRules[$field]))
+                                               minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($requiredRules[$field]))
+                                               required
+                                           @endif
+                                        >
+                                    @elseif ($type === 'datetime-local')
+                                        <input class="form-control mb-3" type="datetime-local" name="{{ $field }}" value="{{ optional(${{ $entityName }}->$field)->format('Y-m-d\TH:i') }}"
+                                           @if(isset($requiredRules[$field]))
+                                               required
+                                           @endif
+                                        >
+                                    @elseif ($type === 'number')
+                                        <input type="number" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3" value="{{ ${{ $entityName }}->$field }}"
+                                               @if(isset($maxRules[$field]))
+                                                   max="{{ explode(':', $maxRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($minRules[$field]))
+                                                   min="{{ explode(':', $minRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($requiredRules[$field]))
+                                                   required
+                                            @endif
+                                        >
+                                    @elseif ($type === 'checkbox')
+                                        <input type="hidden" name="{{ $field }}" value="0">
+                                        <input class="mb-3" type="checkbox" id="{{ $field }}" name="{{ $field }}" value="1" {{ ${{ $entityName }}->$field ? 'checked' : '' }}> <br>
+                                    @else
+                                        <input class="form-control mb-3" type="{{ $type }}" name="{{ $field }}" value="{{ ${{ $entityName }}->$field }}"
+                                           @if(isset($maxRules[$field]))
+                                               maxlength="{{ explode(':', $maxRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($minRules[$field]))
+                                               minlength="{{ explode(':', $minRules[$field])[1] }}"
+                                           @endif
+                                           @if(isset($requiredRules[$field]))
+                                               required
+                                           @endif
+                                        >
+                                    @endif
+                                @endforeach
+
+                                {{ $relatedSelect }}
+
+                                <button type="submit" class="btn btn-primary">Update</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <script>
+                function showImageOverlay() {
+                    document.getElementById('imageOverlay').style.display = 'block';
+                }
+
+                function hideImageOverlay() {
+                    document.getElementById('imageOverlay').style.display = 'none';
+                }
+            </script>
+
+            <script>
+                document.querySelectorAll('option').forEach(function(option) {
+                    option.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        var originalScrollTop = this.parentNode.scrollTop;
+                        this.selected = !this.selected;
+                        var self = this;
+                        this.parentNode.focus();
+                        this.parentNode.click();
+                        setTimeout(function() {
+                            self.parentNode.scrollTop = originalScrollTop;
+                        }, 0);
+
+                        return false;
+                    });
+                });
+            </script>
+
+    </main>
+@endsection

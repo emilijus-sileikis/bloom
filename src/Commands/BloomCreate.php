@@ -17,6 +17,7 @@ class BloomCreate extends Command
     {name : Class (singular), e.g. Post}
     {attributes : Comma separated list of attributes, e.g. "title:string, content:text"}
     {--skip-relationships : Skip creating relationships}
+    {--create-view : Creates user sided views, e.g. products-index.blade.php and products-product.blade.php}
     {--relation-type= : The type of relationship (used only from dashboard)}
     {--related-model= : The related model name (used only from dashboard)}';
 
@@ -37,8 +38,16 @@ class BloomCreate extends Command
         $relationType = $this->option('relation-type');
         $relatedModel = $this->option('related-model');
 
+        if (!$this->checkAttributes($attributes)) {
+            $this->error("ERROR 2: {$attributes}. Not supported attribute type found here.");
+            return;
+        } else {
+            $attributeFlags = [];
+            $attributes = $this->checkAttributes($attributes, $attributeFlags);
+        }
+
         if ($name && $attributes) {
-            $this->bloomCreate($name, $attributes, $relationType, $relatedModel);
+            $this->bloomCreate($name, $attributes, $relationType, $relatedModel, $attributeFlags);
         } else {
             $this->error("ERROR 0: No name or attributes provided.");
         }
@@ -50,7 +59,7 @@ class BloomCreate extends Command
      * @param string $name
      * @param string $attributes
      */
-    protected function bloomCreate($name, $attributes, $relationType, $relatedModel)
+    protected function bloomCreate($name, $attributes, $relationType, $relatedModel, $flags)
     {
         // File existence check
         if ($this->fileExistence($name)) {
@@ -58,29 +67,32 @@ class BloomCreate extends Command
             return;
         }
 
-        // Creating the controller
-        $this->controller($name);
-        // Creating the model
-        $this->model($name, $attributes);
-        // Creating the request
-        $this->request($name, $attributes);
-        // Creating the migration
-        $this->makeMigration($name, $attributes);
-
+        // Command was launched from terminal
         if (!$this->option('skip-relationships')) {
             if ($this->confirm('Do you want to create a relationship between this and another model?')) {
-                $this->makeRelationship($name, $relationType, $relatedModel);
+                $this->makeRelationship($name, $relationType, $relatedModel, $attributes, $flags);
+            } else {
+                $this->initiateFileCreation($name, $attributes, $relatedModel, $relationType, $flags);
             }
+        } else {
+            // Create the relation
+            $this->makeRelationship($name, $relationType, $relatedModel, $attributes, $flags);
         }
 
-        if ($relationType && $relatedModel) {
-            $this->makeRelationship($name, $relationType, $relatedModel);
-        }
+        // Adding the resource routes
+        if ($this->option('create-view')) {
+            $this->createView($name, $attributes, $relationType, $relatedModel);
 
-        // Adding the resource route
-        File::append(base_path('routes/api.php'), "\n".'Route::resource(\'' . Str::plural(strtolower($name)) . "', '{$name}Controller');");
+            File::append(base_path('routes/web.php'), "\n\n".'    Route::resource(\'' . Str::plural(strtolower($name)) . "', \\App\\Http\\Controllers\\" . $name . "Controller::class)->except(['index', 'show'])->middleware(['auth', 'admin']);");
+            File::append(base_path('routes/web.php'), "\n\n".'    Route::get(\'' . Str::plural(strtolower($name)) . "', '\\App\\Http\\Controllers\\" . $name . "Controller@index');");
+            File::append(base_path('routes/web.php'), "\n\n".'    Route::get(\'' . Str::plural(strtolower($name)) . "/{".strtolower($name)."}', '\\App\\Http\\Controllers\\" . $name . "Controller@show');");
+        } else {
+            File::append(base_path('routes/web.php'), "\n\n".'    Route::resource(\'' . Str::plural(strtolower($name)) . "', \\App\\Http\\Controllers\\" . $name . "Controller::class)->middleware(['auth', 'admin']);");
+        }
 
         $this->info("CREATION SUCCESS: {$name} CRUD created successfully.");
+
+        $this->call('route:clear');
     }
 
     /**
@@ -88,21 +100,70 @@ class BloomCreate extends Command
      *
      * @param string $name
      */
-    protected function controller($name)
+    protected function controller($name, $relatedModel, $relationType, $flags)
     {
-        $template = str_replace(
-            [
-                '{{modelName}}',
-                '{{modelNameLowerCase}}',
-                '{{modelNameSingularLowerCase}}',
-            ],
-            [
-                $name,
-                strtolower(Str::plural($name)),
-                strtolower($name),
-            ],
-            $this->getStub('Controller')
-        );
+
+        if ($relatedModel)
+        {
+            $relatedModelUseField = "use App\Models\\" . $relatedModel . ";";
+            $relatedModelSelect = "$".strtolower(Str::plural($relatedModel)) . " = " . $relatedModel . "::all();";
+            $relatedCompact = ", "."'".strtolower(Str::plural($relatedModel))."'";
+            $relatedModelLowerPlural = strtolower(Str::plural($relatedModel));
+
+            if ($relationType === 'belongsToMany')
+            {
+                $belongsToMany = "$".strtolower($name)."->".strtolower($relatedModel)."()->sync(\$request->input('".$relatedModelLowerPlural."'));";
+            } else {$belongsToMany = "";}
+
+            $template = str_replace(
+                [
+                    '{{modelName}}',
+                    '{{modelNameLowerCase}}',
+                    '{{modelNameSingularLowerCase}}',
+                    '{{relatedModelUseField}}',
+                    '{{relatedModelSelect}}',
+                    '{{relatedCompact}}',
+                    '{{belongsToMany}}',
+                    '{{flags}}',
+                ],
+                [
+                    $name,
+                    strtolower(Str::plural($name)),
+                    strtolower($name),
+                    $relatedModelUseField,
+                    $relatedModelSelect,
+                    $relatedCompact,
+                    $belongsToMany,
+                    json_encode($flags),
+                ],
+                $this->getStub('Controller')
+            );
+        } else
+        {
+            $template = str_replace(
+                [
+                    '{{modelName}}',
+                    '{{modelNameLowerCase}}',
+                    '{{modelNameSingularLowerCase}}',
+                    '{{relatedModelUseField}}',
+                    '{{relatedModelSelect}}',
+                    '{{relatedCompact}}',
+                    '{{belongsToMany}}',
+                    '{{flags}}',
+                ],
+                [
+                    $name,
+                    strtolower(Str::plural($name)),
+                    strtolower($name),
+                    '',
+                    '',
+                    '',
+                    '',
+                    json_encode($flags),
+                ],
+                $this->getStub('Controller')
+            );
+        }
 
         file_put_contents(app_path("/Http/Controllers/{$name}Controller.php"), $template);
     }
@@ -113,23 +174,37 @@ class BloomCreate extends Command
      * @param string $name
      * @param string $attributes
      */
-    protected function model($name, $attributes)
+    protected function model($name, $attributes, $relatedModel, $relationType)
     {
         $normalisedAttributes = explode(',', $attributes);
+
+        // Get the names of the attributes
+        $attributeNames = array_map(function ($attribute) {
+            list($name) = explode(':', $attribute);
+            return $name;
+        }, $normalisedAttributes);
 
         // Trim to remove any whitespace and add tabs for formatting
         $fillables = array_map(function ($attribute) {
             return "\t\t'" . trim($attribute) . "'";
-        }, $normalisedAttributes);
+        }, $attributeNames);
+
+        // Add the related model id if the relationship exists
+        if ($relatedModel && $relationType !== 'belongsToMany')
+        {
+            $fillables[] = "\t\t'" . strtolower($relatedModel) . "_id'";
+        }
 
         $template = str_replace(
             [
                 '{{modelName}}',
                 '{{modelAttributes}}',
+                '{{modelNameLowerPlural}}'
             ],
             [
                 $name,
                 implode(",\n", $fillables),
+                strtolower(Str::plural($name)),
             ],
             $this->getStub('Model')
         );
@@ -143,15 +218,21 @@ class BloomCreate extends Command
      * @param string $name
      * @param string $attributes
      */
-    protected function request($name, $attributes)
+    protected function request($name, $attributes, $flags)
     {
         $attributePairs = explode(", ", $attributes);
         $result = [];
 
         // Take the names of the attributes and create a string of rules
         foreach ($attributePairs as $pair) {
-            list($attrName) = explode(":", $pair);
-            $result[] = "\t\t\t'$attrName' => 'required'";
+            list($attrName, $rules) = array_pad(explode(":", $pair, 2), 2, 'string');
+
+            if (isset($flags[$attrName]['isImage']) && $flags[$attrName]['isImage'] === true) {
+                $rules = preg_replace('/\bstring\b/', 'image|mimes:jpeg,png,jpg,gif', $rules);
+                $rules = preg_replace('/\brequired\b/', 'nullable', $rules);
+            }
+
+            $result[] = "\t\t\t'$attrName' => '$rules'";
         }
 
         $template = str_replace(
@@ -179,14 +260,19 @@ class BloomCreate extends Command
      *
      * @param string $name
      */
-    protected function makeRelationship($name, $relationshipType, $relatedModel)
+    protected function makeRelationship($name, $relationshipType, $relatedModel, $attributes, $flags)
     {
         $relationships = [];
 
-        if ($relationshipType && $relatedModel) {
-            $relationships[] = compact('relatedModel', 'relationshipType');
-        } else
-        {
+        if ($this->option('skip-relationships')) {
+
+            if ($relationshipType && $relatedModel) {
+                $relationships[] = compact('relatedModel', 'relationshipType');
+            }
+
+            $this->initiateFileCreation($name, $attributes, $relatedModel, $relationshipType, $flags);
+        } else {
+
             // Multiple relatinoships can be created
             while (true) {
                 $relatedModel = $this->ask("Enter the related model name (e.g., User) (Make sure that the model exists!):");
@@ -198,7 +284,7 @@ class BloomCreate extends Command
 
                 $relationshipType = $this->choice(
                     "Select the relationship type (1:1(hasOne), 1:N(hasMany), N:1(belongsTo), N:M(belongsToMany)):",
-                    ['1:1', '1:N', 'N:1', 'N:M'],
+                    ['hasOne', 'hasMany', 'belongsTo', 'belongsToMany'],
                     0
                 );
 
@@ -216,14 +302,12 @@ class BloomCreate extends Command
                     break;
                 }
             }
+
+            $this->initiateFileCreation($name, $attributes, $relatedModel, $relationshipType, $flags);
         }
 
         // Handle the relationships
         foreach ($relationships as $relationship) {
-            if (!config('command_from_frontend'))
-            {
-                $relationshipType = $this->mapRelationshipTypes($relationship['relationshipType']);
-            }
             $this->updateModelRelationship($name, $relationship['relatedModel'], $relationshipType);
         }
     }
@@ -235,7 +319,7 @@ class BloomCreate extends Command
      * @param string $relatedModel
      * @param string $relationshipType
      */
-    protected function updateModelRelationship($name, $relatedModel, $relationshipType)
+    protected function updateModelRelationship($name, $relatedModel, $relationshipType, $skipMigration = false)
     {
         $modelPath = app_path("/Models/{$name}.php");
         $modelContents = file_get_contents($modelPath);
@@ -266,8 +350,10 @@ class BloomCreate extends Command
             $this->createForeignKeyMigration($name, $relatedModel, $foreignKeyName);
         }
         // Create a pivot migration for N:M relationships
-        if ($relationshipType === "belongsToMany") {
+        if ($relationshipType === "belongsToMany" && !$skipMigration) {
             $this->createPivotMigration($name, $relatedModel);
+
+            $this->updateModelRelationship($relatedModel, $name, "belongsToMany", true);
         }
     }
 
@@ -282,7 +368,7 @@ class BloomCreate extends Command
     {
         $tableName = strtolower(Str::plural($name));
         $relatedTable = strtolower(Str::plural($relatedModel));
-        $time = $this->getCurrentTime();
+        $time = $this->getCurrentTime(-1);
         $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($name)) . "_table.php";
 
         $content = str_replace(
@@ -310,14 +396,31 @@ class BloomCreate extends Command
      */
     protected function createPivotMigration ($name, $relatedModel)
     {
-        $time = $this->getCurrentTime();
+        $time = $this->getCurrentTime(-1);
         $nameToLower = strtolower($name);
         $relatedNameToLower = strtolower($relatedModel);
-        $className = "Create" . Str::studly($name) . Str::studly($relatedModel) . "Table";
-        $pivotTableName = strtolower(Str::singular($name)) . "_" . strtolower(Str::singular($relatedModel));
+
+        if (Str::studly($relatedModel) < Str::studly($name)) {
+            $class = Str::studly($relatedModel) . Str::studly($name);
+            $pivotTableName = strtolower(Str::singular($relatedModel)) . "_" . strtolower(Str::singular($name));
+        } else {
+            $class = Str::studly($name) . Str::studly($relatedModel);
+            $pivotTableName = strtolower(Str::singular($name)) . "_" . strtolower(Str::singular($relatedModel));
+        }
+
+        $className = "Create" . $class . "Table";
         $table1 = strtolower(Str::singular($name));
         $table2 = strtolower(Str::singular($relatedModel));
-        $migrationFileName = "{$time}_create_{$nameToLower}_{$relatedNameToLower}_table.php";
+        $table1Plural = Str::plural($table1);
+        $table2Plural = Str::plural($table2);
+
+        if ($relatedNameToLower < $nameToLower) {
+            $tableName = $relatedNameToLower . "_" . $nameToLower;
+        } else {
+            $tableName = $nameToLower . "_" . $relatedNameToLower;
+        }
+
+        $migrationFileName = "{$time}_create_{$tableName}_table.php";
 
         $content = str_replace(
             [
@@ -325,12 +428,16 @@ class BloomCreate extends Command
                 '{{pivotTableName}}',
                 '{{tableName1}}',
                 '{{tableName2}}',
+                '{{table1Plural}}',
+                '{{table2Plural}}',
             ],
             [
                 $className,
                 $pivotTableName,
                 $table1,
                 $table2,
+                $table1Plural,
+                $table2Plural,
             ],
             $this->getStub('PivotMigration')
         );
@@ -348,6 +455,12 @@ class BloomCreate extends Command
     protected function makeMigration($name, $attributes)
     {
         $time = $this->getCurrentTime();
+
+        if (config('command_from_frontend'))
+        {
+            $time = $this->getCurrentTime(1);
+        }
+
         $table = Str::plural(strtolower($name));
         $migrationFileName = "{$time}_create_{$table}_table.php";
         $migrationStub = $this->getStub('Migration');
@@ -377,6 +490,111 @@ class BloomCreate extends Command
         return $migrationFileName;
     }
 
+    protected function createFormView($name, $relatedModel, $relationType)
+    {
+        if ($relatedModel) {
+            $nameLower = strtolower($relatedModel);
+            $namePlural = Str::plural($relatedModel);
+            $namePluralLower = strtolower($namePlural);
+            $nameLowerPlural = strtolower(Str::plural($relatedModel));
+
+            if ($relationType === 'belongsToMany') {
+                $relatedSelect = "
+            <div class=\"form-group\">
+                <label for=\"{$nameLowerPlural}\">{$namePlural}:</label>
+                <select class=\"form-control mb-3 users\" name=\"{$nameLowerPlural}[]\" id=\"{$nameLowerPlural}\" multiple required>
+                    @foreach(\${$nameLowerPlural} as \${$nameLower})
+                        <option value=\"{{ \${$nameLower}->id }}\">{{ \${$nameLower}->name ?? \${$nameLower}->title ?? \${$nameLower} }}</option>
+                    @endforeach
+                </select>
+            </div>";
+            } else {
+                $relatedSelect = '';
+            }
+        } else {
+            $relatedSelect = '';
+            $nameLower = '';
+            $namePluralLower = '';
+        }
+
+        $entityName = strtolower($name);
+        $entityNamePlural = strtolower(Str::plural($name));
+
+        if (!file_exists($path = resource_path('/views/admin/'.$entityNamePlural)))
+        {
+            mkdir($path, 0755, true);
+        }
+
+        $this->placeContents('admin/Edit-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'edit');
+        $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create');
+    }
+
+    private function createView($name, $attributes, $relationType, $relatedModel)
+    {
+        $entityName = strtolower($name);
+        $entityNamePlural = strtolower(Str::plural($name));
+        $entityNameLowerPlural = strtolower($entityNamePlural);
+
+        if (!file_exists($path = resource_path("/views/{$entityNameLowerPlural}/")))
+        {
+            mkdir($path, 0755, true);
+        }
+
+        $content = str_replace(
+            [
+                '{{ $nameLower }}',
+                '{{ $name }}',
+            ],
+            [
+                $entityNamePlural,
+                $name,
+            ],
+            $this->getStub('admin/Index-view')
+        );
+
+        $content2 = str_replace(
+            [
+                '{{ $nameLowerSingular }}',
+            ],
+            [
+                $entityName,
+            ],
+            $this->getStub('admin/Show-view')
+        );
+
+        file_put_contents(resource_path("views/{$entityNameLowerPlural}/index.blade.php"), $content);
+
+        file_put_contents(resource_path("views/{$entityNameLowerPlural}/show.blade.php"), $content2);
+    }
+
+    protected function placeContents($stubName, $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, $viewType)
+    {
+        $formStub = $this->getStub($stubName);
+
+        if ($nameLower === '') {
+            $namePluralLower = 'related_models';
+            $nameLower = 'related_model';
+        }
+
+        //if ($viewType === 'create') {$relatedSelect = '';}
+
+        $formStub = str_replace([
+            '{{ $entityName }}',
+            '{{ $entityNamePlural }}',
+            '{{ $relatedSelect }}',
+            '{{ $relatedLower }}',
+            '{{ $relatedLowerSingular }}',
+        ], [
+            $entityName,
+            $entityNamePlural,
+            $relatedSelect,
+            $namePluralLower,
+            $nameLower,
+        ], $formStub);
+
+        file_put_contents(resource_path("views/admin/{$entityNamePlural}/{$viewType}-{$entityName}.blade.php"), $formStub);
+    }
+
     /**
      * Get the stub file for the generator.
      *
@@ -389,21 +607,114 @@ class BloomCreate extends Command
     }
 
     /**
-     * Maps the relationship types.
+     * Check if the attributes are supported.
      *
-     * @param string $notation
-     * @return string
+     * @param string $attributes
+     * @return bool
      */
-    protected function mapRelationshipTypes($notation)
+    protected function checkAttributes($attributes, &$attributeFlags = [])
     {
-        $map = [
-            '1:1' => 'hasOne',
-            '1:N' => 'hasMany',
-            'N:1' => 'belongsTo',
-            'N:M' => 'belongsToMany',
+        $supportedAttributes = [
+            'integer',
+            'unsignedInteger',
+            'string',
+            'char',
+            'date',
+            'datetime',
+            'time',
+            'timestamp',
+            'text',
+            'json',
+            'binary',
+            'boolean',
+            'decimal',
+            'unsignedDecimal',
+            'double',
+            'unsignedDouble',
+            'float',
+            'unsignedFloat',
         ];
 
-        return $map[$notation];
+        $attributePairs = explode(", ", $attributes);
+        $newAttributes = $attributes;
+        $attributeFlags = [];
+
+        foreach ($attributePairs as $pair) {
+            // Check if the validation rules are provided
+            if (str_contains($pair, ':')) {
+                list($attrName, $rules) = explode(":", $pair, 2);
+
+                $attributeFlags[$attrName] = [
+                    'isImage' => false,
+                ];
+
+                // Split the rules by the pipe character
+                $individualRules = explode('|', $rules);
+
+                // Validate each provided rule
+                foreach ($individualRules as $rule) {
+                    $ruleParts = explode(':', $rule);
+
+                    // Extract rule type and value
+                    $ruleType = $ruleParts[0];
+                    $ruleValue = count($ruleParts) > 1 ? $ruleParts[1] : null;
+
+                    // Handle specific rules
+                    switch ($ruleType) {
+                        case 'max':
+                            if (!is_numeric($ruleValue)) {
+                                echo "Invalid 'max' Rule Value\n";
+                                return false;
+                            }
+                            break;
+
+                        case 'min':
+                            if (!is_numeric($ruleValue)) {
+                                echo "Invalid 'min' Rule Value\n";
+                                return false;
+                            }
+                            break;
+
+                        case 'size':
+                            if (!is_numeric($ruleValue)) {
+                                echo "Invalid 'size' Rule Value\n";
+                                return false;
+                            }
+                            break;
+
+                        case 'required':
+                        case 'numeric':
+                        case 'string':
+                        case 'binary':
+                            break;
+
+                        default:
+                            if (!in_array($ruleType, $supportedAttributes)) {
+                                echo "Invalid Rule Type\n";
+                                return false;
+                            }
+                            break;
+                    }
+
+                    if ($ruleType === 'binary') {
+                        $newAttributes = str_replace('binary', 'string', $newAttributes);
+                        $attributeFlags[$attrName]['isImage'] = true;
+                    }
+                }
+
+            } else {
+                // If no colon then it's just an attribute
+                list($attrName, $attrType) = explode(":", $pair);
+
+                // Check if the attribute type is supported
+                if (!in_array($attrType, $supportedAttributes)) {
+                    echo "Invalid Attribute Type\n";
+                    return false;
+                }
+            }
+        }
+
+        return $newAttributes;
     }
 
     /**
@@ -411,9 +722,10 @@ class BloomCreate extends Command
      *
      * @return string
      */
-    protected function getCurrentTime()
+    protected function getCurrentTime($subtractSeconds = 0)
     {
-        return now()->format('Y_m_d_His');
+        $currentTime = now()->subSeconds($subtractSeconds);
+        return $currentTime->format('Y_m_d_His');
     }
 
     /**
@@ -431,5 +743,45 @@ class BloomCreate extends Command
         if ($controllerExists || $modelExists || $requestExists) {
             return 1;
         } else return 0;
+    }
+
+    protected function initiateFileCreation($name, $attributes, $relatedModel, $relationType, $flags)
+    {
+        // Parse the attributes
+        $fixedAttributes = $this->parseAttributes($attributes);
+
+        // Creating the controller
+        $this->controller($name, $relatedModel, $relationType, $flags);
+        // Creating the model
+        $this->model($name, $attributes, $relatedModel, $relationType);
+        // Creating the request
+        $this->request($name, $attributes, $flags);
+        // Creating the migration
+        $this->makeMigration($name, $fixedAttributes);
+        // Create the form view
+        $this->createFormView($name, $relatedModel, $relationType);
+    }
+
+    protected function parseAttributes($attributes)
+    {
+        $parsedAttributes = [];
+        $attributeDefinitions = explode(',', $attributes);
+
+        foreach ($attributeDefinitions as $attribute) {
+
+            $attributeDefinition = trim($attribute);
+            // Extracting the name
+            $name = Str::before($attributeDefinition, ':');
+            // Extacting the type and the validations
+            $typeAndValidations = Str::after($attributeDefinition, ':');
+            // Taking only the type
+            $type = Str::before($typeAndValidations, '|');
+
+            // Appending each attribute to the array
+            $parsedAttributes[] = "$name:$type";
+        }
+
+        // Join them with ','
+        return implode(', ', $parsedAttributes);
     }
 }

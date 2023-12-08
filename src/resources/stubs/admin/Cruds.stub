@@ -9,6 +9,25 @@
                 <li class="breadcrumb-item active">Pages / Table List</li>
             </ol>
             <div class="content">
+                @if (session()->has('error'))
+                    <div class="alert alert-danger">
+                        {{ session()->get('error') }}
+                    </div>
+                @endif
+                @if (session()->has('status'))
+                    <div class="alert alert-success">
+                        {{ session()->get('status') }}
+                    </div>
+                @endif
+                <h4>Don't see the newly created tables?</h4>
+                <p>Click the button below to run the migrations.</p>
+
+                    <form action="{{ route('dashboard.migrate') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="_method" value="PUT">
+                        <button type="submit" class="btn btn-primary mb-3">Migrate</button>
+                    </form>
+
                 <div class="card mb-4">
                     <div class="card-header">
                         <i class="fas fa-table me-1"></i>

@@ -1,0 +1,41 @@
+@extends('layouts.app')
+
+@section('content')
+
+    <link href="{{ asset('css/styles.css') }}" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <div class="py-3 py-md-5 bg-light">
+        <div class="container">
+            <div class="row">
+                @foreach(${{ $nameLower }} as $item)
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url('{{ $nameLower }}', [$item->id]) }}" class="card card-hover text-center" style="text-decoration: none; color:black; padding: 15px; border: 1px solid #ddd;">
+                            <div class="card-body">
+                                @if(isset($item->title))
+                                    <h5 class="card-title">{{ $item->title }}</h5>
+                                @elseif(isset($item->name))
+                                    <h5 class="card-title">{{ $item->name }}</h5>
+                                @else
+                                    <h5 class="card-title">Element with ID: {{ $item->id }}</h5>
+                                @endif
+
+                                @if(isset($item->photo))
+                                    <img src="{{ $item->photo }}" alt="Photo">
+                                @endif
+
+                                @if(isset($item->created_at))
+                                    <div class="text-muted mt-2">
+                                        <i class="fa fa-clock-o" style="font-size: 20px"></i> Created: {{ \App\Models\{{ $name }}::getTimeAgo($item->created_at) }}
+                                    </div>
+                                @endif
+                            </div>
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+@endsection
