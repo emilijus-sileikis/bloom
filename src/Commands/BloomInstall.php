@@ -263,6 +263,7 @@ EOT;
         $cruds = $this->getStub('Cruds');
         $crudData = $this->getStub('Cruds-data');
         $entry = $this->getStub('Entry-edit');
+        $example = $this->getStub('Examples');
 
         $viewsPath = resource_path("views/admin");
 
@@ -280,6 +281,7 @@ EOT;
         file_put_contents(resource_path("views/admin/cruds.blade.php"), $cruds);
         file_put_contents(resource_path("views/admin/cruds-data.blade.php"), $crudData);
         file_put_contents(resource_path("views/admin/entry-edit.blade.php"), $entry);
+        file_put_contents(resource_path("views/admin/examples.blade.php"), $example);
     }
 
     /**
