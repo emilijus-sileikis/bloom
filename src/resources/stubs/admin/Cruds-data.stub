@@ -74,8 +74,10 @@
                                 <td>
                                     @if($column === "is_admin" && $row->is_admin === 1)
                                         <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
-                                    @else
+                                    @elseif (Route::has("{$tableName}.edit"))
                                         <a href="{{ route("{$tableName}.edit", [$tableNameSingular => $row->id]) }}" class="btn btn-info">Edit</a>
+                                    @else
+                                        <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
                                     @endif
                                 </td>
                                 <td>
