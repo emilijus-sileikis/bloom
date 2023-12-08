@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -53,6 +54,8 @@ class BloomInstall extends Command
             $this->createAdmin();
 
             $this->registerMiddleware();
+
+            $this->replaceOldRoute();
 
             $this->createDashboard('Dashboard');
 
@@ -161,6 +164,25 @@ EOT;
     }
 
     /**
+     * Replaces the old dashboard route.
+     */
+    private function replaceOldRoute()
+    {
+        $webFilePath = base_path('routes/web.php');
+
+        $content = File::get($webFilePath);
+
+        // Replace the old route definition
+        $oldRoute = "Route::get('/dashboard', function () {\n    return view('dashboard');\n})->middleware(['auth', 'verified'])->name('dashboard');\n";
+        $newRoute = "Route::get('/dashboard', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard');\n";
+        $content = str_replace($oldRoute, $newRoute, $content);
+
+        File::put($webFilePath, $content);
+
+        $this->info('Dashboard route replaced successfully.');
+    }
+
+    /**
      * Creates the Dashboard CRUD (Controller and View).
      */
     protected function createDashboard($name)
@@ -170,17 +192,6 @@ EOT;
 
         $routesPath = base_path('routes/web.php');
         $routesContents = file_get_contents($routesPath);
-
-        // Replace the dashboard route
-        $updatedRoutesContents = str_replace(
-            "Route::get('/dashboard', function () {
-    return view('admin.index');
-})->middleware(['auth', 'admin'])->name('dashboard');",
-            "Route::get('/dashboard', [App\Http\Controllers\Admin\CommandController::class, 'index'])
-    ->middleware(['auth', 'admin'])
-    ->name('dashboard');",
-            $routesContents
-        );
 
         // Append the new routes
         $newRoutes = "
@@ -207,9 +218,9 @@ EOT;
     Route::put('/dashboard/{tableName}/delete', [App\Http\Controllers\Admin\CommandController::class, 'tableDelete'])->middleware(['auth', 'admin'])->name('table.delete');
     ";
 
-        $updatedRoutesContents .= $newRoutes;
+        $routesContents .= $newRoutes;
 
-        file_put_contents($routesPath, $updatedRoutesContents);
+        file_put_contents($routesPath, $routesContents);
 
         $this->info($name.' CRUD created successfully.');
     }
