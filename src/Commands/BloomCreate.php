@@ -232,12 +232,16 @@ class BloomCreate extends Command
                 $rules = preg_replace('/\brequired\b/', 'nullable', $rules);
             }
 
-            if ($rules === 'text') {
-                $rules = 'string';
+            if (str_contains($rules, 'text')) {
+                $rules = str_replace('text', 'string', $rules);
             }
 
-            if ($rules === 'decimal' || $rules === 'float') {
-                $rules = 'numeric';
+            if (str_contains($rules, 'decimal')) {
+                $rules = str_replace('decimal', 'numeric', $rules);
+            }
+
+            if (str_contains($rules, 'float')) {
+                $rules = str_replace('float', 'numeric', $rules);
             }
 
             $result[] = "\t\t\t'$attrName' => '$rules'";
