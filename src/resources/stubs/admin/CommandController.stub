@@ -53,16 +53,22 @@ class CommandController extends Controller
 
         if ($commandName === 'bloom:delete') {
 
-            $fullCommand = "$commandName $crudName";
+            $dropTable = $request->input('dropTable');
+            $pivotTable = $request->input('pivotTable');
 
-            if ($request->input('dropTable')) {
-                $fullCommand = "$commandName $crudName --drop-table";
-
-                if ($request->input('pivotTable')) {
-                    $pivotTable = $request->input('pivotTable');
-                    $fullCommand .= " --pivot-table=$pivotTable";
-                }
+            if ($dropTable) {
+                $dropTableOption = ' --drop-table';
+            } else {
+                $dropTableOption = '';
             }
+
+            if (!empty($pivotTable)) {
+                $pivotTableOption = " --pivot-table=$pivotTable";
+            } else {
+                $pivotTableOption = '';
+            }
+
+            $fullCommand = "$commandName $crudName" . $dropTableOption . $pivotTableOption;
 
             return $this->commandCall($fullCommand, $crudName, $fromList);
         }
@@ -89,7 +95,7 @@ class CommandController extends Controller
             return $this->commandCall($fullCommand, $crudName, $fromList);
         }
 
-         else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
+        else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
     }
 
     protected function createdCruds()
@@ -130,28 +136,6 @@ class CommandController extends Controller
         return view('admin.cruds-data', compact('tableData', 'tableName', 'tableColumns', 'tableNameSingular'));
     }
 
-    protected function entryDelete($tableName, $id)
-    {
-        if (auth()->user()->is_admin === 0) {
-            return redirect()->back()->with('error', "You cannot delete entries from this page.");
-        }
-
-        if ($tableName === 'users') {
-            $userRole = DB::table($tableName)
-                ->where('id', $id)
-                ->select('is_admin')
-                ->first();
-
-            if ($userRole->is_admin === 1) {
-                return redirect()->back()->with('error', "You cannot delete users from this page.");
-            }
-        }
-
-        DB::table($tableName)->where('id', $id)->delete();
-
-        return redirect()->back()->with('status', "Entry deleted successfully.");
-    }
-
     protected function tableDelete($tableName)
     {
         if (auth()->user()->is_admin === 0) {
@@ -159,10 +143,41 @@ class CommandController extends Controller
         }
 
         $table = ucfirst(Str::singular($tableName));
+        $model = "App\\Models\\{$table}";
         $commandName = 'bloom:delete';
         $request = new Request([
             'crudName' => $table,
         ]);
+
+        if (class_exists($model)) {
+            $results = $model::all();
+        } else {
+            $results = null;
+        }
+
+        if (isset($results)) {
+            foreach ($results as $result) {
+                $imageAttribute = null;
+                $attributes = $result->getAttributes();
+
+                foreach ($attributes as $attribute => $value) {
+                    if (is_string($value) && @getimagesize($value)) {
+                        $imageAttribute = $attribute;
+                        break;
+                    }
+                }
+
+                if ($imageAttribute) {
+                    $imagePath = public_path($result->$imageAttribute);
+
+                    if (file_exists($imagePath)) {
+                        unlink($imagePath);
+                    }
+                }
+
+                $result->delete();
+            }
+        }
 
         $this->execute($commandName, $request, true);
 
@@ -268,16 +283,20 @@ class CommandController extends Controller
                 return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
             } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
                 return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
-            } elseif (str_starts_with($output, 'ERROR 2:')) {
+            } elseif (str_starts_with($output, 'ERROR 3:')) {
                 return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+            } elseif (str_starts_with($output, 'ERROR 2:')) {
+                return redirect()->back()->with('error', "Not supported attribute type found. Please check if you have entered the attributes correctly.");
             } elseif (str_starts_with($output, 'ERROR 4:')) {
-                return redirect()->back()->with('error', "The provided table does not exist.");
+                return redirect()->back()->with('error', "The table does not exist in the database.");
             } elseif (str_starts_with($output, 'ERROR 5:')) {
                 return redirect()->back()->with('error', "The pivot table name is required.");
             } elseif (str_starts_with($output, 'ERROR 6:')) {
-                return redirect()->back()->with('error', "The table provided pivot table does not exist in the database.");
+                return redirect()->back()->with('error', "The provided pivot table does not exist in the database.");
             } elseif (str_starts_with($output, 'ERROR 7:')) {
-                return redirect()->back()->with('error', $output);
+                return redirect()->back()->with('error', "Constraint violation. {$output}");
+            } elseif (str_starts_with($output, 'ERROR 8:')) {
+                return redirect()->back()->with('error', "An error occurred while deleting the table. {$output}");
             } else {
                 return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
             }

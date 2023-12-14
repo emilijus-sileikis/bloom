@@ -72,24 +72,31 @@
                                     @endif
                                 @endforeach
                                 <td>
-                                    @if($column === "is_admin" && $row->is_admin === 1)
-                                        <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
-                                    @elseif (Route::has("{$tableName}.edit"))
-                                        <a href="{{ route("{$tableName}.edit", [$tableNameSingular => $row->id]) }}" class="btn btn-info">Edit</a>
+                                    @if(Route::has("{$tableName}.edit"))
+
+                                        @if($column === "is_admin" && $row->is_admin === 1)
+                                            <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
+                                        @else
+                                            <a href="{{ route("{$tableName}.edit", [$tableNameSingular => $row->id]) }}" class="btn btn-info">Edit</a>
+                                        @endif
                                     @else
                                         <a href="" class="btn btn-info" style="pointer-events: none; opacity: 0.5;">Edit</a>
                                     @endif
                                 </td>
                                 <td>
-                                    <form action="{{ route('entry.delete', ['tableName' => $tableName, 'id' => $row->id]) }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="_method" value="PUT">
-                                        @if($column === "is_admin" && $row->is_admin === 1)
-                                            <button class="btn btn-danger" style="pointer-events: none; opacity: 0.5;" onClick="return confirmSubmit()">Delete</button>
-                                        @else
-                                            <button type="submit" class="btn btn-danger" onClick="return confirmSubmit()">Delete</button>
-                                        @endif
-                                    </form>
+                                    @if(Route::has("{$tableName}.destroy"))
+                                        <form action="{{ route("$tableName.destroy", [$tableNameSingular => $row->id]) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            @if($column === "is_admin" && $row->is_admin === 1)
+                                                <button class="btn btn-danger" style="pointer-events: none; opacity: 0.5;" onClick="return confirmSubmit()">Delete</button>
+                                            @else
+                                                <button type="submit" class="btn btn-danger" onClick="return confirmSubmit()">Delete</button>
+                                            @endif
+                                        </form>
+                                    @else
+                                        <a href="" class="btn btn-danger" style="pointer-events: none; opacity: 0.5;">Delete</a>
+                                    @endif
                                 </td>
                             </tr>
 

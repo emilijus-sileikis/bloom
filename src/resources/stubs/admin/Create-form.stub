@@ -27,13 +27,14 @@
                         <div class="card-body">
                             <form method="POST" action="{{ route('{{ $entityNamePlural }}.store') }}" enctype="multipart/form-data">
                                 @csrf
+                                <input type="hidden" name="modelName" value="{{ $entityNamePlural }}">
                                 @foreach ($inputFieldTypes as $field => $type)
                                     @if($field !== 'id')
                                         <div class="form-group">
                                             <label for="{{ $field }}">{{ ucfirst($field) }}:</label>
-                                            @if($field === "user_id" && $type !== 'file')
-                                                <select class="form-control mb-3" name="{{ $field }}">
-                                                    @foreach($users as $related)
+                                            @if($field === "{{ $relatedLowerSingular }}_id" && $type !== 'file')
+                                                <select class="form-control mb-3" name="{{ $relatedLowerSingular }}_id">
+                                                    @foreach(${{ $relatedLower }} as $related)
                                                         <option value="{{ $related->id }}">
                                                             {{ $related->name ?? $related->title ?? $related }}
                                                         </option>
@@ -68,6 +69,30 @@
                                                 >
                                             @elseif ($type === 'time')
                                                 <input type="time" id="{{ $field }}" name="{{ $field }}" class="form-control mb-3"
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif ($type === 'decimal')
+                                                <input type="number" step="0.01" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3"
+                                                       @if(isset($maxRules[$field]))
+                                                           max="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           min="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($requiredRules[$field]))
+                                                           required
+                                                    @endif
+                                                >
+                                            @elseif ($type === 'float')
+                                                <input type="number" step="any" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3"
+                                                       @if(isset($maxRules[$field]))
+                                                           max="{{ explode(':', $maxRules[$field])[1] }}"
+                                                       @endif
+                                                       @if(isset($minRules[$field]))
+                                                           min="{{ explode(':', $minRules[$field])[1] }}"
+                                                       @endif
                                                        @if(isset($requiredRules[$field]))
                                                            required
                                                     @endif
@@ -136,7 +161,7 @@
         </div>
 
             <script>
-                document.querySelectorAll('.users option').forEach(function(option) {
+                document.querySelectorAll('{{ $scriptName }} option').forEach(function(option) {
                     option.addEventListener('mousedown', function(e) {
                         e.preventDefault();
                         var originalScrollTop = this.parentNode.scrollTop;

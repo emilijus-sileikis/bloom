@@ -232,6 +232,14 @@ class BloomCreate extends Command
                 $rules = preg_replace('/\brequired\b/', 'nullable', $rules);
             }
 
+            if ($rules === 'text') {
+                $rules = 'string';
+            }
+
+            if ($rules === 'decimal' || $rules === 'float') {
+                $rules = 'numeric';
+            }
+
             $result[] = "\t\t\t'$attrName' => '$rules'";
         }
 
@@ -499,6 +507,7 @@ class BloomCreate extends Command
             $nameLowerPlural = strtolower(Str::plural($relatedModel));
 
             if ($relationType === 'belongsToMany') {
+                $scriptName = '';
                 $relatedSelect = "
             <div class=\"form-group\">
                 <label for=\"{$nameLowerPlural}\">{$namePlural}:</label>
@@ -509,9 +518,11 @@ class BloomCreate extends Command
                 </select>
             </div>";
             } else {
+                $scriptName = '.' . $nameLower . '_id';
                 $relatedSelect = '';
             }
         } else {
+            $scriptName = '';
             $relatedSelect = '';
             $nameLower = '';
             $namePluralLower = '';
@@ -525,8 +536,8 @@ class BloomCreate extends Command
             mkdir($path, 0755, true);
         }
 
-        $this->placeContents('admin/Edit-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'edit');
-        $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create');
+        $this->placeContents('admin/Edit-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'edit', $scriptName);
+        $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create', $scriptName);
     }
 
     private function createView($name, $attributes, $relationType, $relatedModel)
@@ -567,7 +578,7 @@ class BloomCreate extends Command
         file_put_contents(resource_path("views/{$entityNameLowerPlural}/show.blade.php"), $content2);
     }
 
-    protected function placeContents($stubName, $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, $viewType)
+    protected function placeContents($stubName, $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, $viewType, $scriptName)
     {
         $formStub = $this->getStub($stubName);
 
@@ -576,20 +587,20 @@ class BloomCreate extends Command
             $nameLower = 'related_model';
         }
 
-        //if ($viewType === 'create') {$relatedSelect = '';}
-
         $formStub = str_replace([
             '{{ $entityName }}',
             '{{ $entityNamePlural }}',
             '{{ $relatedSelect }}',
             '{{ $relatedLower }}',
             '{{ $relatedLowerSingular }}',
+            '{{ $scriptName }}',
         ], [
             $entityName,
             $entityNamePlural,
             $relatedSelect,
             $namePluralLower,
             $nameLower,
+            $scriptName,
         ], $formStub);
 
         file_put_contents(resource_path("views/admin/{$entityNamePlural}/{$viewType}-{$entityName}.blade.php"), $formStub);
@@ -616,23 +627,13 @@ class BloomCreate extends Command
     {
         $supportedAttributes = [
             'integer',
-            'unsignedInteger',
             'string',
-            'char',
             'date',
-            'datetime',
-            'time',
-            'timestamp',
-            'text',
-            'json',
+            'text', //padaryt kad butu string validation
             'binary',
             'boolean',
-            'decimal',
-            'unsignedDecimal',
-            'double',
-            'unsignedDouble',
-            'float',
-            'unsignedFloat',
+            'decimal', //padaryt kad butu numeric validation
+            'float', //padaryt kad butu numeric validation
         ];
 
         $attributePairs = explode(", ", $attributes);

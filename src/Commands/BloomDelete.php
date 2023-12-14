@@ -51,6 +51,7 @@ class BloomDelete extends Command
         $patternForMigration = "/_create_(\w+)_{$tableNameSingular}_table.php/";
         $patternForMigration2 = "/_create_{$tableNameSingular}_(\w+)_table.php/";
         $migrationsToDelete = [];
+        $imageDir = public_path('uploads/' . $tableName);
 
         if ($this->option('drop-table')) {
 
@@ -137,6 +138,10 @@ class BloomDelete extends Command
             }
         }
 
+        if ($this->deleteImages($imageDir)) {
+            $this->info("DELETION SUCCESS: {$imageDir} image directory deleted successfully.");
+        }
+
         $this->info("DELETION SUCCESS: {$name} CRUD deleted successfully.");
 
         $this->call('route:clear');
@@ -180,4 +185,26 @@ class BloomDelete extends Command
 
         file_put_contents($filePath, $newContent);
     }
+
+    function deleteImages ($dir)
+    {
+        if (!is_dir($dir)) {
+            return false;
+        }
+
+        $files = array_diff(scandir($dir), array('.', '..'));
+
+        foreach ($files as $file) {
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
+
+            if (is_dir($path)) {
+                deleteImages($path);
+            } else {
+                unlink($path);
+            }
+        }
+
+        return rmdir($dir);
+    }
+
 }

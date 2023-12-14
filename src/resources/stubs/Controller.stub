@@ -38,6 +38,7 @@ class {{modelName}}Controller extends Controller
         $data = $request->all();
 
         $imageFieldName = null;
+        $imageDir = 'uploads/'.$data['modelName'];
 
         foreach ($request->all() as $field => $value) {
             if ($value instanceof \Illuminate\Http\UploadedFile) {
@@ -50,7 +51,7 @@ class {{modelName}}Controller extends Controller
                     $image = $request->file($imageFieldName);
                     $ext = $image->getClientOriginalExtension();
                     $name = uniqid().'.'.$ext;
-                    $path = $image->move('uploads', $name);
+                    $path = $image->move($imageDir, $name);
                     $data[$imageFieldName] = $path;
         }
 
@@ -93,6 +94,7 @@ class {{modelName}}Controller extends Controller
         ${{modelNameSingularLowerCase}} = {{modelName}}::findOrFail($id);
         $data = $request->all();
         $imageFieldName = null;
+        $imageDir = 'uploads/'.$data['modelName'];
 
         foreach ($request->all() as $field => $value) {
             if ($value instanceof \Illuminate\Http\UploadedFile) {
@@ -108,7 +110,7 @@ class {{modelName}}Controller extends Controller
                 if ($image->isFile()) {
                     $ext = $image->getClientOriginalExtension();
                     $name = uniqid().'.'.$ext;
-                    $path = $image->move('uploads', $name);
+                    $path = $image->move($imageDir, $name);
                     $data[$imageFieldName] = $path;
 
                     // Delete old file

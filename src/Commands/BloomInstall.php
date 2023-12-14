@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
 
 class BloomInstall extends Command
 {
@@ -70,22 +69,7 @@ class BloomInstall extends Command
      */
     protected function setupBreeze()
     {
-        // Create a new process
-        $process = new Process(['php', 'artisan', 'breeze:install']);
-
-        // Set the input stream to allow interaction
-        $process->setInput("blade\n\n");
-
-        // Start the process
-        $process->start();
-
-        // Wait for the process to complete
-        $process->wait();
-
-        // Check if the process was successful
-        if (!$process->isSuccessful()) {
-            throw new ProcessFailedException($process);
-        }
+        $this->call('breeze:install');
     }
 
     /**
@@ -209,12 +193,6 @@ EOT;
 
     Route::get('/dashboard/cruds/{tableName}', [App\Http\Controllers\Admin\CommandController::class, 'showTableData'])->middleware(['auth', 'admin'])->name('dashboard.cruds.data');
 
-    Route::get('/dashboard/{tableName}/edit/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryEdit'])->middleware(['auth', 'admin'])->name('entry.edit');
-
-    Route::put('/dashboard/{tableName}/update/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryUpdate'])->middleware(['auth', 'admin'])->name('entry.update');
-
-    Route::put('/dashboard/{tableName}/delete/{id}', [App\Http\Controllers\Admin\CommandController::class, 'entryDelete'])->middleware(['auth', 'admin'])->name('entry.delete');
-
     Route::put('/dashboard/{tableName}/delete', [App\Http\Controllers\Admin\CommandController::class, 'tableDelete'])->middleware(['auth', 'admin'])->name('table.delete');
     ";
 
@@ -273,7 +251,6 @@ EOT;
         $details = $this->getStub('Command-details');
         $cruds = $this->getStub('Cruds');
         $crudData = $this->getStub('Cruds-data');
-        $entry = $this->getStub('Entry-edit');
         $example = $this->getStub('Examples');
 
         $viewsPath = resource_path("views/admin");
@@ -291,7 +268,6 @@ EOT;
         file_put_contents(resource_path("views/admin/command-details.blade.php"), $details);
         file_put_contents(resource_path("views/admin/cruds.blade.php"), $cruds);
         file_put_contents(resource_path("views/admin/cruds-data.blade.php"), $crudData);
-        file_put_contents(resource_path("views/admin/entry-edit.blade.php"), $entry);
         file_put_contents(resource_path("views/admin/examples.blade.php"), $example);
     }
 

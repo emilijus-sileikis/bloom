@@ -28,17 +28,17 @@
                             <form method="POST" action="{{ route('{{ $entityNamePlural }}.update', ${{ $entityName }}->id) }}" enctype="multipart/form-data">
                                 @csrf
                                 @method('PATCH')
-
+                                <input type="hidden" name="modelName" value="{{ $entityNamePlural }}">
                                 @foreach($fields as $field => $type)
                                     <label for="{{ $field }}">{{ ucfirst($field) }}:</label>
-                                    @if($field === "related_model_id" && $type !== 'file')
-                                        <select class="form-control mb-3" name="{{ $field }}">
-                                            @foreach($related_models as $related)
-                                                <option value="{{ $related->id }}" {{ ${{ $entityName }}->$field == $related->id ? 'selected' : '' }}>
-                                                    {{ $related->name ?? $related->title ?? $related }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        @if($field === "{{ $relatedLowerSingular }}_id" && $type !== 'file')
+                                            <select class="form-control mb-3" name="{{ $relatedLowerSingular }}_id">
+                                                @foreach(${{ $relatedLower }} as $related)
+                                                    <option value="{{ $related->id }}" {{ ${{ $entityName }}->$field == $related->id ? 'selected' : '' }}>
+                                                        {{ $related->name ?? $related->title ?? $related }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                     @elseif($type === 'textarea')
                                         <textarea class="form-control mb-3" name="{{ $field }}"
                                           @if(isset($maxRules[$field]))
@@ -107,6 +107,30 @@
                                                required
                                            @endif
                                         >
+                                    @elseif ($type === 'float')
+                                        <input type="number" step="any" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3" value="{{ ${{ $entityName }}->$field }}"
+                                               @if(isset($maxRules[$field]))
+                                                   max="{{ explode(':', $maxRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($minRules[$field]))
+                                                   min="{{ explode(':', $minRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($requiredRules[$field]))
+                                                   required
+                                            @endif
+                                        >
+                                    @elseif ($type === 'decimal')
+                                        <input type="number" step="0.01" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3" value="{{ ${{ $entityName }}->$field }}"
+                                               @if(isset($maxRules[$field]))
+                                                   max="{{ explode(':', $maxRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($minRules[$field]))
+                                                   min="{{ explode(':', $minRules[$field])[1] }}"
+                                               @endif
+                                               @if(isset($requiredRules[$field]))
+                                                   required
+                                            @endif
+                                        >
                                     @elseif ($type === 'number')
                                         <input type="number" id="{{ $field }}" name="{{ $field }}" pattern="[0-9]*" class="form-control mb-3" value="{{ ${{ $entityName }}->$field }}"
                                                @if(isset($maxRules[$field]))
@@ -158,7 +182,7 @@
             </script>
 
             <script>
-                document.querySelectorAll('option').forEach(function(option) {
+                document.querySelectorAll('{{ $scriptName }} option').forEach(function(option) {
                     option.addEventListener('mousedown', function(e) {
                         e.preventDefault();
                         var originalScrollTop = this.parentNode.scrollTop;
