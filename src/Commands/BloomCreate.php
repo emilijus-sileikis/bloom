@@ -58,6 +58,9 @@ class BloomCreate extends Command
      *
      * @param string $name
      * @param string $attributes
+     * @param string $relationType
+     * @param string $relatedModel
+     * @param array $flags
      */
     protected function bloomCreate($name, $attributes, $relationType, $relatedModel, $flags)
     {
@@ -81,10 +84,10 @@ class BloomCreate extends Command
 
         // Adding the resource routes
         if ($this->option('create-view')) {
-            $this->createView($name, $attributes, $relationType, $relatedModel);
+            $this->createView($name, $relatedModel, $relationType);
 
             File::append(base_path('routes/web.php'), "\n\n".'    Route::resource(\'' . Str::plural(strtolower($name)) . "', \\App\\Http\\Controllers\\" . $name . "Controller::class)->except(['index', 'show'])->middleware(['auth', 'admin']);");
-            File::append(base_path('routes/web.php'), "\n\n".'    Route::get(\'' . Str::plural(strtolower($name)) . "', '\\App\\Http\\Controllers\\" . $name . "Controller@index');");
+            File::append(base_path('routes/web.php'), "\n\n".'    Route::get(\'' . Str::plural(strtolower($name)) . "', '\\App\\Http\\Controllers\\" . $name . "Controller@index')->name('" . Str::plural(strtolower($name)) . ".index');");
             File::append(base_path('routes/web.php'), "\n\n".'    Route::get(\'' . Str::plural(strtolower($name)) . "/{".strtolower($name)."}', '\\App\\Http\\Controllers\\" . $name . "Controller@show');");
         } else {
             File::append(base_path('routes/web.php'), "\n\n".'    Route::resource(\'' . Str::plural(strtolower($name)) . "', \\App\\Http\\Controllers\\" . $name . "Controller::class)->middleware(['auth', 'admin']);");
@@ -99,6 +102,9 @@ class BloomCreate extends Command
      * Create a controller for the given name.
      *
      * @param string $name
+     * @param string $relatedModel
+     * @param string $relationType
+     * @param array $flags
      */
     protected function controller($name, $relatedModel, $relationType, $flags)
     {
@@ -173,6 +179,8 @@ class BloomCreate extends Command
      *
      * @param string $name
      * @param string $attributes
+     * @param string $relatedModel
+     * @param string $relationType
      */
     protected function model($name, $attributes, $relatedModel, $relationType)
     {
@@ -190,7 +198,7 @@ class BloomCreate extends Command
         }, $attributeNames);
 
         // Add the related model id if the relationship exists
-        if ($relatedModel && $relationType !== 'belongsToMany')
+        if ($relatedModel && $relationType !== 'belongsToMany' && $relationType !== 'hasMany')
         {
             $fillables[] = "\t\t'" . strtolower($relatedModel) . "_id'";
         }
@@ -217,6 +225,7 @@ class BloomCreate extends Command
      *
      * @param string $name
      * @param string $attributes
+     * @param array $flags
      */
     protected function request($name, $attributes, $flags)
     {
@@ -229,7 +238,6 @@ class BloomCreate extends Command
 
             if (isset($flags[$attrName]['isImage']) && $flags[$attrName]['isImage'] === true) {
                 $rules = preg_replace('/\bstring\b/', 'image|mimes:jpeg,png,jpg,gif', $rules);
-                $rules = preg_replace('/\brequired\b/', 'nullable', $rules);
             }
 
             if (str_contains($rules, 'text')) {
@@ -242,6 +250,10 @@ class BloomCreate extends Command
 
             if (str_contains($rules, 'float')) {
                 $rules = str_replace('float', 'numeric', $rules);
+            }
+
+            if (!str_contains($rules, 'required')) {
+                $rules .= '|nullable';
             }
 
             $result[] = "\t\t\t'$attrName' => '$rules'";
@@ -259,8 +271,7 @@ class BloomCreate extends Command
             $this->getStub('Request')
         );
 
-        if (!file_exists($path = app_path('/Http/Requests')))
-        {
+        if (!file_exists($path = app_path('/Http/Requests'))) {
             mkdir($path, 0755, true);
         }
 
@@ -271,6 +282,10 @@ class BloomCreate extends Command
      * Create a relationship for the given name.
      *
      * @param string $name
+     * @param string $relationshipType
+     * @param string $relatedModel
+     * @param string $attributes
+     * @param array $flags
      */
     protected function makeRelationship($name, $relationshipType, $relatedModel, $attributes, $flags)
     {
@@ -320,7 +335,7 @@ class BloomCreate extends Command
 
         // Handle the relationships
         foreach ($relationships as $relationship) {
-            $this->updateModelRelationship($name, $relationship['relatedModel'], $relationshipType);
+            $this->updateModelRelationship($name, $relationship['relatedModel'], $relationshipType, false, $flags);
         }
     }
 
@@ -330,19 +345,57 @@ class BloomCreate extends Command
      * @param string $name
      * @param string $relatedModel
      * @param string $relationshipType
+     * @param bool $skipMigration
      */
-    protected function updateModelRelationship($name, $relatedModel, $relationshipType, $skipMigration = false)
+    protected function updateModelRelationship($name, $relatedModel, $relationshipType, $skipMigration = false, $flags)
     {
         $modelPath = app_path("/Models/{$name}.php");
         $modelContents = file_get_contents($modelPath);
         $relationshipMethodName = strtolower($relatedModel);
         $relatedModelClass = ucfirst($relatedModel);
         $foreignKeyName = strtolower($relatedModel) . '_id';
+        $nameLower = strtolower($name);
+        $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass', 'id', '$foreignKeyName'";
+
+//        if ($relationshipType === 'hasMany') {
+//            $foreignKeyName = strtolower($name) . '_id';
+//            $relatedPath = app_path("/Models/{$relatedModel}.php");
+//            $relatedFunc = "    public function $nameLower()\n    {\n        return \$this->belongsTo('App\Models\\$name', '$foreignKeyName', 'id');\n    }\n";
+//
+//            if (file_exists($relatedPath)) {
+//                $relatedContents = file_get_contents($relatedPath);
+//
+//                $closingBracketPosition = strrpos($relatedContents, '}');
+//
+//                if ($closingBracketPosition !== false) {
+//                    $relatedContents = substr_replace($relatedContents, $relatedFunc, $closingBracketPosition, 0);
+//                }
+//
+//                file_put_contents($relatedPath, $relatedContents);
+//            }
+//        }
+
+        if ($relationshipType === 'hasMany') {
+            $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass', '$foreignKeyName', 'id'";
+            $foreignKeyName = strtolower($name) . '_id';
+
+            $this->updateRelatedModel($relatedModel, $name);
+            $this->addRelationToController($name, $relatedModel, $flags);
+            $this->updateViews($name, $relatedModel);
+        }
+
+        if ($relationshipType === 'belongsTo') {
+            $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass', '$foreignKeyName', 'id'";
+        }
+
+        if ($relationshipType === 'belongsToMany') {
+            $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass'";
+        }
 
         // Content that will be added to the model
         $relationshipContent = "\n    public function $relationshipMethodName()\n";
         $relationshipContent .= "    {\n";
-        $relationshipContent .= "        return \$this->$relationshipType('App\Models\\$relatedModelClass'";
+        $relationshipContent .= $mainPart;
         $relationshipContent .= ");\n";
         $relationshipContent .= "    }\n";
 
@@ -359,13 +412,13 @@ class BloomCreate extends Command
 
         // Create a migration for foreign keys when needed
         if ($relationshipType === 'belongsTo' || $relationshipType === 'hasOne' || $relationshipType === 'hasMany') {
-            $this->createForeignKeyMigration($name, $relatedModel, $foreignKeyName);
+            $this->createForeignKeyMigration($name, $relatedModel, $foreignKeyName, $relationshipType);
         }
         // Create a pivot migration for N:M relationships
         if ($relationshipType === "belongsToMany" && !$skipMigration) {
             $this->createPivotMigration($name, $relatedModel);
 
-            $this->updateModelRelationship($relatedModel, $name, "belongsToMany", true);
+            $this->updateModelRelationship($relatedModel, $name, "belongsToMany", true, $flags);
         }
     }
 
@@ -376,12 +429,24 @@ class BloomCreate extends Command
      * @param string $relatedModel
      * @param string $foreignKeyName
      */
-    protected function createForeignKeyMigration($name, $relatedModel, $foreignKeyName)
+    protected function createForeignKeyMigration($name, $relatedModel, $foreignKeyName, $relationType)
     {
         $tableName = strtolower(Str::plural($name));
         $relatedTable = strtolower(Str::plural($relatedModel));
         $time = $this->getCurrentTime(-1);
         $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($name)) . "_table.php";
+
+//        if ($relationType === "hasMany") {
+//            $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($relatedModel)) . "_table.php";
+//            $tableName = strtolower(Str::plural($relatedModel));
+//            $relatedTable = strtolower(Str::plural($name));
+//        }
+
+        if ($relationType === "hasMany") {
+            $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($relatedModel)) . "_table.php";
+            $tableName = strtolower(Str::plural($relatedModel));
+            $relatedTable = strtolower(Str::plural($name));
+        }
 
         $content = str_replace(
             [
@@ -482,7 +547,7 @@ class BloomCreate extends Command
         $schema = '';
         foreach ($attributeNames as $attributeName) {
             list($columnName, $columnType) = array_map('trim', explode(':', $attributeName));
-            $schema .= "\$table->$columnType('$columnName');\n            ";
+            $schema .= "\$table->$columnType('$columnName')->nullable();\n            ";
         }
 
         $migrationStub = str_replace([
@@ -502,6 +567,13 @@ class BloomCreate extends Command
         return $migrationFileName;
     }
 
+    /**
+     * Create a view form for the given name and attributes on the admin dashboard.
+     *
+     * @param string $name
+     * @param string $relationType
+     * @param string $relatedModel
+     */
     protected function createFormView($name, $relatedModel, $relationType)
     {
         if ($relatedModel) {
@@ -509,18 +581,20 @@ class BloomCreate extends Command
             $namePlural = Str::plural($relatedModel);
             $namePluralLower = strtolower($namePlural);
             $nameLowerPlural = strtolower(Str::plural($relatedModel));
+            $entityName = strtolower($name);
 
             if ($relationType === 'belongsToMany') {
                 $scriptName = '';
                 $relatedSelect = "
-            <div class=\"form-group\">
-                <label for=\"{$nameLowerPlural}\">{$namePlural}:</label>
-                <select class=\"form-control mb-3 users\" name=\"{$nameLowerPlural}[]\" id=\"{$nameLowerPlural}\" multiple required>
-                    @foreach(\${$nameLowerPlural} as \${$nameLower})
-                        <option value=\"{{ \${$nameLower}->id }}\">{{ \${$nameLower}->name ?? \${$nameLower}->title ?? \${$nameLower} }}</option>
-                    @endforeach
-                </select>
-            </div>";
+    <div class=\"form-group\">
+        <label for=\"{$nameLowerPlural}\">{$namePlural}:</label>
+        <select class=\"form-control mb-3 users\" name=\"{$nameLowerPlural}[]\" id=\"{$nameLowerPlural}\" multiple required>
+            @foreach(\${$nameLowerPlural} as \${$nameLower})
+                <option value=\"{{ \${$nameLower}['id'] }}\" @if(isset(\${$entityName})) {{ in_array(\${$nameLower}['id'], \${$entityName}->{$nameLower}->pluck('id')->toArray()) ? 'selected' : '' }} @endif>{{ \${$nameLower}->name ?? \${$nameLower}->title ?? \${$nameLower} }}</option>
+            @endforeach
+        </select>
+    </div>";
+
             } else {
                 $scriptName = '.' . $nameLower . '_id';
                 $relatedSelect = '';
@@ -544,15 +618,26 @@ class BloomCreate extends Command
         $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create', $scriptName);
     }
 
-    private function createView($name, $attributes, $relationType, $relatedModel)
+    /**
+     * Create a view for the given name.
+     *
+     * @param string $name
+     */
+    private function createView($name, $relatedModel, $relationType)
     {
         $entityName = strtolower($name);
         $entityNamePlural = strtolower(Str::plural($name));
         $entityNameLowerPlural = strtolower($entityNamePlural);
+        $relatedName = strtolower($relatedModel);
+        $showRelated = "false";
 
         if (!file_exists($path = resource_path("/views/{$entityNameLowerPlural}/")))
         {
             mkdir($path, 0755, true);
+        }
+
+        if ($relationType === 'belongsToMany' || $relationType === 'hasMany') {
+            $showRelated = "true";
         }
 
         $content = str_replace(
@@ -570,9 +655,13 @@ class BloomCreate extends Command
         $content2 = str_replace(
             [
                 '{{ $nameLowerSingular }}',
+                '{{ $relatedName }}',
+                '{{ $showRelated }}',
             ],
             [
                 $entityName,
+                $relatedName,
+                $showRelated,
             ],
             $this->getStub('admin/Show-view')
         );
@@ -582,6 +671,18 @@ class BloomCreate extends Command
         file_put_contents(resource_path("views/{$entityNameLowerPlural}/show.blade.php"), $content2);
     }
 
+    /**
+     * Place the contents in the view.
+     *
+     * @param string $stubName
+     * @param string $entityName
+     * @param string $entityNamePlural
+     * @param string $relatedSelect
+     * @param string $nameLower
+     * @param string $namePluralLower
+     * @param string $viewType
+     * @param string $scriptName
+     */
     protected function placeContents($stubName, $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, $viewType, $scriptName)
     {
         $formStub = $this->getStub($stubName);
@@ -625,7 +726,8 @@ class BloomCreate extends Command
      * Check if the attributes are supported.
      *
      * @param string $attributes
-     * @return bool
+     * @param array $attributeFlags
+     * @return bool|string
      */
     protected function checkAttributes($attributes, &$attributeFlags = [])
     {
@@ -633,11 +735,11 @@ class BloomCreate extends Command
             'integer',
             'string',
             'date',
-            'text', //padaryt kad butu string validation
+            'text',
             'binary',
             'boolean',
-            'decimal', //padaryt kad butu numeric validation
-            'float', //padaryt kad butu numeric validation
+            'decimal',
+            'float',
         ];
 
         $attributePairs = explode(", ", $attributes);
@@ -750,6 +852,15 @@ class BloomCreate extends Command
         } else return 0;
     }
 
+    /**
+     * Initiate the file creation.
+     *
+     * @param string $name
+     * @param string $attributes
+     * @param string $relatedModel
+     * @param string $relationType
+     * @param array $flags
+     */
     protected function initiateFileCreation($name, $attributes, $relatedModel, $relationType, $flags)
     {
         // Parse the attributes
@@ -767,6 +878,12 @@ class BloomCreate extends Command
         $this->createFormView($name, $relatedModel, $relationType);
     }
 
+    /**
+     * Parse the attributes.
+     *
+     * @param string $attributes
+     * @return string
+     */
     protected function parseAttributes($attributes)
     {
         $parsedAttributes = [];
@@ -788,5 +905,102 @@ class BloomCreate extends Command
 
         // Join them with ','
         return implode(', ', $parsedAttributes);
+    }
+
+    /**
+     * Update the related model for 1:N relation.
+     *
+     * @param string $relatedModel
+     * @param string $name
+     */
+    protected function updateRelatedModel($relatedModel, $name)
+    {
+        $path = app_path("/Models/{$relatedModel}.php");
+        $content = file_get_contents($path);
+
+        if (preg_match('/protected\s+\$fillable\s*=\s*\[([^\]]*)\];/s', $content, $matches)) {
+            $fillableArray = eval('return [' . $matches[1] . '];');
+        } else {
+            $fillableArray = [];
+        }
+
+        $newField = strtolower($name) . '_id';
+        if (!in_array($newField, $fillableArray)) {
+            $fillableArray[] = $newField;
+        }
+
+        $newFillable = "\t\t'" . implode("', '", $fillableArray) . "'";
+
+        $content = preg_replace('/protected\s+\$fillable\s*=\s*\[([^\]]*)\];/s', "protected \$fillable = [{$newFillable}];", $content);
+
+        file_put_contents($path, $content);
+    }
+
+    /**
+     * Add the relation to the controller for 1:N relation.
+     *
+     * @param string $name
+     * @param string $relatedModel
+     * @param array $flags
+     */
+    protected function addRelationToController($name, $relatedModel, $flags)
+    {
+        $relatedModelUseField = "use App\Models\\" . $name . ";";
+        $relatedModelSelect = "$".strtolower(Str::plural($name)) . " = " . $name . "::all();";
+        $relatedCompact = ", "."'".strtolower(Str::plural($name))."'";
+        $belongsToMany = "";
+
+
+        $template = str_replace(
+            [
+                '{{modelName}}',
+                '{{modelNameLowerCase}}',
+                '{{modelNameSingularLowerCase}}',
+                '{{relatedModelUseField}}',
+                '{{relatedModelSelect}}',
+                '{{relatedCompact}}',
+                '{{belongsToMany}}',
+                '{{flags}}',
+            ],
+            [
+                $relatedModel,
+                strtolower(Str::plural($relatedModel)),
+                strtolower($relatedModel),
+                $relatedModelUseField,
+                $relatedModelSelect,
+                $relatedCompact,
+                $belongsToMany,
+                json_encode($flags),
+            ],
+            $this->getStub('Controller')
+        );
+
+        file_put_contents(app_path("/Http/Controllers/{$relatedModel}Controller.php"), $template);
+    }
+
+    /**
+     * Update the views for 1:N relation.
+     *
+     * @param string $name
+     * @param string $relatedModel
+     */
+    protected function updateViews($name, $relatedModel)
+    {
+        $nameLower = strtolower($name);
+        $scriptName = '.' . $nameLower . '_id';
+        $namePlural = Str::plural($name);
+        $namePluralLower = strtolower($namePlural);
+
+        $relatedSelect = '';
+        $entityName = strtolower($relatedModel);
+        $entityNamePlural = strtolower(Str::plural($relatedModel));
+
+        if (!file_exists($path = resource_path('/views/admin/'.$entityNamePlural)))
+        {
+            mkdir($path, 0755, true);
+        }
+
+        $this->placeContents('admin/Edit-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'edit', $scriptName);
+        $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create', $scriptName);
     }
 }

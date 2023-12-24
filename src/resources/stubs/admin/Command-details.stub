@@ -30,9 +30,22 @@
                                 <form method="POST" action="{{ route('dashboard.commands.execute', ['command' => $commandName]) }}">
                                     @csrf
                                     <div class="form-group">
+                                        @foreach($allModels as $model)
+                                            {{ $model }}
+                                        @endforeach
                                         <div class="h4">Arguments</div>
                                         <label for="crudName">Name (e.g. Post):</label>
-                                        <input type="text" class="form-control mb-2" id="crudName" name="crudName" maxlength="30" required>
+
+                                            <select id="crudName" name="crudName" class="form-control mb-2">
+                                                <option value="">Select a model</option>
+
+                                                @foreach($allModels as $model)
+                                                    @if($model !== 'User')
+                                                        <option value="{{ $model }}">{{ $model }}</option>
+                                                    @endif
+                                                @endforeach
+
+                                            </select>
 
                                         <label for="dropTable">Check if you want to drop related tables on CRUD deletion:</label>
                                         <input type="checkbox" id="dropTable" name="dropTable" style="width: 22px; height: 22px; vertical-align: middle;">

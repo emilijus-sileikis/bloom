@@ -61,6 +61,40 @@
                             </ul>
                         </div>
                     @endif
+
+                    @php
+                        $showRelatedInfo = {{ $showRelated }};
+                    @endphp
+
+                    @if ($showRelatedInfo)
+                        @if (${{ $nameLowerSingular }} && isset(${{ $nameLowerSingular }}->{{ $relatedName }}))
+                            <div class="other-attributes mt-4 col-12">
+                                <h3 class="mb-3">Related Authors</h3>
+                                <ul class="list-unstyled d-flex flex-wrap">
+                                    @foreach (${{ $nameLowerSingular }}->{{ $relatedName }} as $related)
+
+                                        @if($related->id)
+                                            <li class="col-md-6 mb-3">
+                                                <i class="fa fa-circle">
+                                                    ID: {{ ucfirst($related->id) }}
+                                                </i>
+                                            </li>
+                                        @endif
+
+                                        @if($related->name)
+                                            <li class="col-md-6 mb-3">
+                                                <i class="fa fa-circle">
+                                                   Name: {{ ucfirst($related->name) }}
+                                                </i>
+                                            </li>
+                                        @endif
+
+
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    @endif
             </div>
         </div>
     </div>

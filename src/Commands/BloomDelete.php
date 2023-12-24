@@ -43,6 +43,11 @@ class BloomDelete extends Command
         }
     }
 
+    /**
+     * Delete all CRUD parts with provided name.
+     *
+     * @param string $name
+     */
     protected function bloomDelete($name)
     {
         $tableName = strtolower(Str::plural($name));
@@ -52,6 +57,7 @@ class BloomDelete extends Command
         $patternForMigration2 = "/_create_{$tableNameSingular}_(\w+)_table.php/";
         $migrationsToDelete = [];
         $imageDir = public_path('uploads/' . $tableName);
+        $models = $this->findRelatedModels($name);
 
         if ($this->option('drop-table')) {
 
@@ -75,6 +81,26 @@ class BloomDelete extends Command
                 return;
             }
         }
+
+        if ($this->option('pivot-table')) {
+            try {
+                Schema::dropIfExists($pivotTableName);
+            } catch (\Exception $e) {
+                $this->error("ERROR 7: {$e->getMessage()}");
+                return;
+            }
+        }
+
+        if ($this->option('drop-table')) {
+            try {
+                Schema::dropIfExists($tableName);
+            } catch (\Exception $e) {
+                $this->error("ERROR 8: {$e->getMessage()}");
+                return;
+            }
+        }
+
+        $this->removeRelations($models, $name);
 
         $filesToDelete = [
             app_path("/Http/Controllers/{$name}Controller.php"),
@@ -118,24 +144,6 @@ class BloomDelete extends Command
         $pubDir = resource_path("/views/{$tableName}");
         if (File::exists($pubDir)) {
             File::deleteDirectory($pubDir);
-        }
-
-        if ($this->option('pivot-table')) {
-            try {
-                Schema::dropIfExists($pivotTableName);
-            } catch (\Exception $e) {
-                $this->error("ERROR 7: {$e->getMessage()}");
-                return;
-            }
-        }
-
-        if ($this->option('drop-table')) {
-            try {
-                Schema::dropIfExists($tableName);
-            } catch (\Exception $e) {
-                $this->error("ERROR 8: {$e->getMessage()}");
-                return;
-            }
         }
 
         if ($this->deleteImages($imageDir)) {
@@ -186,7 +194,13 @@ class BloomDelete extends Command
         file_put_contents($filePath, $newContent);
     }
 
-    function deleteImages ($dir)
+    /**
+     * Delete all images from the directory.
+     *
+     * @param string $dir
+     * @return bool
+     */
+    function deleteImages($dir)
     {
         if (!is_dir($dir)) {
             return false;
@@ -198,7 +212,7 @@ class BloomDelete extends Command
             $path = $dir . DIRECTORY_SEPARATOR . $file;
 
             if (is_dir($path)) {
-                deleteImages($path);
+                $this->deleteImages($path);
             } else {
                 unlink($path);
             }
@@ -206,5 +220,55 @@ class BloomDelete extends Command
 
         return rmdir($dir);
     }
+
+    /**
+     * Find related models.
+     *
+     * @param string $name
+     */
+    function findRelatedModels($name)
+    {
+        $models = [];
+        $pathToModel = app_path("Models/{$name}.php");
+        $modelContent = file_get_contents($pathToModel);
+
+        preg_match_all('/\'App\\\\Models\\\\[^\\\']*\'/', $modelContent, $matches);
+
+        foreach ($matches[0] as $match) {
+            $modelParts = explode('\\', $match);
+            $modelLastPart = end($modelParts);
+            $modelNames = str_replace("'", '', STR::lower($modelLastPart));
+            $models[] = $modelNames;
+        }
+
+        return $models;
+    }
+
+    /**
+     * Remove relations from the model.
+     *
+     * @param array $models
+     */
+    function removeRelations($models, $name)
+    {
+        foreach ($models as $model) {
+            $modelName = STR::ucfirst($model);
+            $path = app_path("Models/{$modelName}.php");
+            $name = STR::lower($name);
+
+            if (file_exists($path)) {
+                $content = file_get_contents($path);
+                $pattern = '/\bpublic\s+function\s+' . preg_quote($name, '/') . '\s*\([^)]*\)\s*{[^}]*}\s*/';
+
+                if (preg_match($pattern, $content, $matches)) {
+                    $foundFunction = $matches[0];
+                    $content = str_replace($foundFunction, '', $content);
+                    file_put_contents($path, $content);
+                }
+            }
+        }
+    }
+
+
 
 }

@@ -41,6 +41,7 @@
                                 <th>Name</th>
                                 <th>Rows</th>
                                 <th>View</th>
+                                <th>Show</th>
                                 <th>Delete</th>
                             </tr>
                             </thead>
@@ -50,6 +51,7 @@
                                 <th>Name</th>
                                 <th>Rows</th>
                                 <th>View</th>
+                                <th>Show</th>
                                 <th>Delete</th>
                             </tr>
                             </tfoot>
@@ -62,6 +64,11 @@
                                     <td>{{ $table['name'] }}</td>
                                     <td>{{ $table['rows'] }}</td>
                                     <td><a href="{{ route('dashboard.cruds.data', ['tableName' => $table['name']]) }}" class="btn btn-primary">View</a></td>
+                                    @if(View::exists($table['name'].".index"))
+                                        <td><a href="{{ route($table['name'].".index") }}" class="btn btn-primary">Show</a></td>
+                                    @else
+                                        <td><a href="" class="btn btn-primary" style="pointer-events: none; opacity: 0.5;">Show</a></td>
+                                    @endif
                                     @if($table['name'] === "users")
                                         <td><a href="" class="btn btn-danger" style="pointer-events: none; opacity: 0.5;">Delete</a></td>
                                     @else

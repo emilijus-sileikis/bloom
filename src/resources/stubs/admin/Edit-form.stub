@@ -5,7 +5,7 @@
         <div class="container-fluid px-4">
             <h1 class="mt-4">Edit {{ $entityName }}</h1>
             <ol class="breadcrumb mb-4">
-                <li class="breadcrumb-item"><a href="/dashboard/cruds/{{ $entityName }}s" style="text-decoration: none;">{{ $entityName }}s</a></li>
+                <li class="breadcrumb-item"><a href="/dashboard/cruds/{{ $entityNamePlural }}" style="text-decoration: none;">{{ $entityNamePlural }}</a></li>
                 <li class="breadcrumb-item active">edit</li>
             </ol>
 
