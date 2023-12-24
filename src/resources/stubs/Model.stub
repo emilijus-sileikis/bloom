@@ -1,0 +1,95 @@
+<?php
+
+namespace App\Models;
+
+use App\Http\Requests\{{modelName}}Request;
+use DateTime;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+
+class {{modelName}} extends Model
+{
+    protected $guarded = ['id'];
+
+    public $timestamps = true;
+
+    protected $fillable = [
+{{modelAttributes}}
+    ];
+
+    public static function getFieldTypes()
+    {
+        $tableName = with(new static)->getTable();
+        $columns = DB::select('SHOW COLUMNS FROM ' . $tableName);
+
+        $fieldTypes = [];
+
+        foreach ($columns as $column) {
+            $type = preg_replace('/^([^(]+).*$/', '$1', $column->Type);
+            $fieldTypes[$column->Field] = $type;
+        }
+
+        return $fieldTypes;
+    }
+
+    public static function mapFieldTypes($fieldTypes)
+    {
+        $typeMap = [
+            'integer' => 'number',
+            'int' => 'number',
+            'bigint' => 'number',
+            'unsignedInteger' => 'number',
+            'string' => 'text',
+            'char' => 'text',
+            'varchar' => 'text',
+            'date' => 'date',
+            'datetime' => 'datetime-local',
+            'timestamp' => 'datetime-local',
+            'time' => 'time',
+            'text' => 'textarea',
+            'json' => 'textarea',
+            'binary' => 'file',
+            'blob' => 'file',
+            'boolean' => 'checkbox',
+            'tinyint' => 'checkbox',
+            'decimal' => 'decimal',
+            'double' => 'float',
+            'float' => 'float',
+            'unsignedDecimal' => 'number',
+            'unsignedDouble' => 'number',
+            'double unsigned' => 'number',
+            'unsignedFloat' => 'number',
+        ];
+
+        $inputFieldTypes = [];
+
+        foreach ($fieldTypes as $field => $type) {
+            $inputFieldTypes[$field] = $typeMap[$type] ?? 'text';
+        }
+
+        return $inputFieldTypes;
+    }
+
+    public static function getTimeAgo($dateTime)
+    {
+        $now = new DateTime;
+        $createdTime = new DateTime($dateTime);
+        $interval = $now->diff($createdTime);
+
+        if ($interval->y > 0) {
+            $timeAgo = $interval->format("%y years ago");
+        } elseif ($interval->m > 0) {
+            $timeAgo = $interval->format("%m months ago");
+        } elseif ($interval->d > 0) {
+            $timeAgo = $interval->format("%d days ago");
+        } elseif ($interval->h > 0) {
+            $timeAgo = $interval->format("%h hours ago");
+        } elseif ($interval->i > 0) {
+            $timeAgo = $interval->format("%i minutes ago");
+        } else {
+            $timeAgo = "Just now";
+        }
+
+        return $timeAgo;
+    }
+}

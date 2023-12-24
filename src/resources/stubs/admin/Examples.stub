@@ -1,0 +1,190 @@
+@extends('admin.dashboard')
+
+@section('content')
+
+    <style>
+        body {
+            padding-top: 56px;
+        }
+
+        em {
+            background: antiquewhite;
+        }
+
+        .doc-title {
+            font-weight: bold;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding-top: 0;
+            }
+
+            .sidebar {
+                z-index: 1000;
+                padding: 20px;
+                overflow-x: hidden;
+                overflow-y: auto;
+                background-color: #f8f9fa;
+                border-right: 1px solid #dee2e6;
+                position: sticky;
+                top: 56px;
+            }
+
+            .collapse-button[data-bs-toggle="collapse"]:after {
+                content: "\25BC";
+                float: right;
+            }
+
+            .collapse-button[data-bs-toggle="collapse"][aria-expanded="true"]:after {
+                content: "\25B2";
+            }
+        }
+    </style>
+
+    <main>
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Commands Documentation</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item active">Tools / Commands</li>
+            </ol>
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- Sidebar -->
+                    <div class="col-md-3">
+                        <div class="sidebar" id="sidebar">
+                            <h2>Contents</h2>
+                            <div class="list-group">
+                                <a href="#section1" class="list-group-item list-group-item-action doc-title">Install Command</a>
+                                <a href="#section2" class="list-group-item list-group-item-action doc-title">Create Command</a>
+                                <a href="#section3" class="list-group-item list-group-item-action doc-title">Delete Command</a>
+                                <button class="list-group-item list-group-item-action bg-light collapse-button doc-title" data-bs-toggle="collapse" data-bs-target="#collapseCRUD" aria-expanded="false" aria-controls="collapseCRUD">
+                                    Examples
+                                </button>
+                                <div class="collapse" id="collapseCRUD">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><a href="#subsection1" class="list-group-item-action">Creating a full CRUD via terminal</a></li>
+                                        <li class="list-group-item"><a href="#subsection2" class="list-group-item-action">Creating a full CRUD via dashboard</a></li>
+                                        <li class="list-group-item"><a href="#subsection3" class="list-group-item-action">Image handling</a></li>
+                                        <li class="list-group-item"><a href="#subsection4" class="list-group-item-action">Other notes</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="col-md-9 ml-sm-auto">
+                        <div class="mt-4">
+                            <h2 id="section1" class="doc-title">Install Command</h2>
+                            <p>The installation command: <em>php artisan bloom:install</em> can be used for mainly three purposes.
+                            First one being the initial Admin Dashboard installation that is the first step in order to
+                            start using the generator.</p>
+                            <p>
+                                The second purpose is to update the user table to add back the 'is_admin' flag if the database
+                                was refreshed, and it got removed. This is done by running the command with a '--update-user-table flag:
+                                <em>php artisan bloom:install --update-user-table</em> inside the terminal. This will add the 'is_admin'
+                                column back to the user table.
+                            </p>
+                            <p>
+                                The third and final use is to create a new user with administrator privileges. This is done by running
+                                the command with a '--create-admin' flag: <em>php artisan bloom:install --create-admin</em>. After providing
+                                the required information, a new user will be created with administrator privileges.
+                            </p>
+                        </div>
+
+                        <div class="mt-4">
+                            <h2 id="section2" class="doc-title">Create Command</h2>
+                            <p>
+                                The create command is used to create a new CRUD module. It can be used by running the command:
+                                <em>php artisan bloom:create</em> inside the terminal. This will start the process of creating a new CRUD module. However,
+                                the command requires a few <b>arguments</b> to be passed in order to work properly. The arguments are as follows:
+                            <ul>
+                                <li><b>Name:</b> The name of the CRUD module. This will be used to create the model, controller, migration, and views. The name <b>MUST</b> have the first letter in uppercase as well as be in <b>singular</b> form.</li>
+                                <li><b>Attributes:</b> The fields that the CRUD module will have including the validations if necessary. This will be used to create the migration and views.</li>
+                            </ul>
+                            Creation command also has a few <b>flags</b> that can be used to customize the process of creating a CRUD module. The flags are as follows:
+                            <ul>
+                                <li><b>--create-view:</b> This flag is used if a user wants to generate front ended views for the CRUD that a regular user could see. </li>
+                                <li><b>--skip-relationships:</b> This flag is used if a user prefers to skip crating relations between two models and just create a carcass. </li>
+                            </ul>
+                            </p>
+                        </div>
+
+                        <div class="mt-4">
+                            <h2 id="section3" class="doc-title">Delete Command</h2>
+                            <p>
+                                The delete command is used to remove a CRUD module. It can be used by running the command:
+                                <em>php artisan bloom:delete</em> inside the terminal. This will start the process of removing the models, views, controllers and even migrations. The command requires only one
+                                argument: <em>Name</em> to be passed in order to work properly.
+
+                            Deletion command also has a few <b>flags</b> that can be used to customize the process of deleting a CRUD module. The flags are as follows:
+                            <ul>
+                                <li><b>--drop-table:</b> This flag is used if a user wants to delete the associated database table. </li>
+                                <li><b>--pivot-table=:</b> This flag is used if a N:M relation was made and there is a need of deleting the pivot table, e.g. <em>--pivot-table=post_tag</em>. </li>
+                            </ul>
+                            </p>
+                        </div>
+
+                        <div class="mt-4">
+                            <h2 id="section4" class="doc-title">Examples</h2>
+                            <div>
+                                <div id="subsection1" class="ml-3">
+                                    <h3>Creating a full CRUD via terminal</h3>
+                                    <p>Content for Create subsection.</p>
+                                </div>
+                                <div id="subsection2" class="ml-3">
+                                    <h3>Creating a full CRUD via dashboard</h3>
+                                    <p>Content for Read subsection.</p>
+                                </div>
+                                <div id="subsection3" class="ml-3">
+                                    <h3>Image handling</h3>
+                                    <p>Content for Update subsection.</p>
+                                </div>
+                                <div id="subsection4" class="ml-3">
+                                    <h3>Other notes</h3>
+                                    <p>Content for Delete subsection.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        window.addEventListener('scroll', function() {
+            var sidebar = document.getElementById("sidebar");
+            var sticky = sidebar.offsetTop;
+
+            if (window.pageYOffset >= sticky) {
+                sidebar.classList.add("sticky")
+            } else {
+                sidebar.classList.remove("sticky");
+            }
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const navbarHeight = document.querySelector(".navbar").offsetHeight;
+            const links = document.querySelectorAll('a[href^="#"]');
+
+            links.forEach(function(link) {
+                link.addEventListener("click", function(event) {
+                    event.preventDefault();
+
+                    const targetElement = document.querySelector(link.getAttribute("href"));
+                    const targetPosition = targetElement.offsetTop;
+
+                    window.scrollTo({
+                        top: targetPosition - navbarHeight,
+                        behavior: "smooth"
+                    });
+                });
+            });
+
+        });
+    </script>
+@endsection

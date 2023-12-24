@@ -1,0 +1,103 @@
+<x-app-layout>
+
+    <link href="{{ asset('css/styles.css') }}" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <div class="py-3 py-md-5 bg-light">
+        <div class="container">
+            <div class="row">
+                @if(isset(${{ $nameLowerSingular }}->title))
+                    <h2 class="card-title mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->title }}</h2>
+                @elseif(isset(${{ $nameLowerSingular }}->name))
+                    <h2 class="card-title mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->name }}</h2>
+                @else
+                    <h2 class="card-title mb-3" style="text-align: justify;">Element with ID: {{ ${{ $nameLowerSingular }}->id }}</h2>
+                @endif
+
+                @if(isset(${{ $nameLowerSingular }}->photo))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->photo) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->image))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->image) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->picture))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->picture) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->img))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->img) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->thumbnail))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->thumbnail) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->thumb))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->thumb) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @elseif(isset(${{ $nameLowerSingular }}->illustration))
+                    <img src="{{ asset(${{ $nameLowerSingular }}->illustration) }}" alt="Photo" style="width: 500px; height: 500px;">
+                @endif
+
+                @if(isset(${{ $nameLowerSingular }}->content))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->content }}</p>
+                @elseif(isset(${{ $nameLowerSingular }}->description))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->description }}</p>
+                @elseif(isset(${{ $nameLowerSingular }}->body))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->body }}</p>
+                @elseif(isset(${{ $nameLowerSingular }}->text))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->text }}</p>
+                @elseif(isset(${{ $nameLowerSingular }}->details))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->details }}</p>
+                @elseif(isset(${{ $nameLowerSingular }}->context))
+                    <p class="card-text mb-3" style="text-align: justify;">{{ ${{ $nameLowerSingular }}->context }}</p>
+                @endif
+
+                    @if (${{ $nameLowerSingular }})
+                        <div class="other-attributes mt-4 col-12">
+                            <h3 class="mb-3">Other Attributes</h3>
+                            <ul class="list-unstyled d-flex flex-wrap">
+                                @php
+                                    $excludeAttributes = ['title', 'name', 'photo', 'image', 'content', 'description', 'body', 'text', 'details', 'context', 'picture', 'img', 'thumbnail', 'thumb', 'illustration'];
+                                    $allAttributes = ${{ $nameLowerSingular }}->getAttributes();
+                                    $otherAttributes = array_diff_key($allAttributes, array_flip($excludeAttributes));
+                                @endphp
+
+                                @foreach($otherAttributes as $key => $value)
+                                    <li class="col-md-6 mb-3"><i class="fa fa-circle"></i> {{ ucfirst($key) }}: {{ $value }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @php
+                        $showRelatedInfo = {{ $showRelated }};
+                    @endphp
+
+                    @if ($showRelatedInfo)
+                        @if (${{ $nameLowerSingular }} && isset(${{ $nameLowerSingular }}->{{ $relatedName }}))
+                            <div class="other-attributes mt-4 col-12">
+                                <h3 class="mb-3">Related Authors</h3>
+                                <ul class="list-unstyled d-flex flex-wrap">
+                                    @foreach (${{ $nameLowerSingular }}->{{ $relatedName }} as $related)
+
+                                        @if($related->id)
+                                            <li class="col-md-6 mb-3">
+                                                <i class="fa fa-circle">
+                                                    ID: {{ ucfirst($related->id) }}
+                                                </i>
+                                            </li>
+                                        @endif
+
+                                        @if($related->name)
+                                            <li class="col-md-6 mb-3">
+                                                <i class="fa fa-circle">
+                                                   Name: {{ ucfirst($related->name) }}
+                                                </i>
+                                            </li>
+                                        @endif
+
+
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    @endif
+            </div>
+        </div>
+    </div>
+
+</x-app-layout>
+

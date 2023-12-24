@@ -1,0 +1,93 @@
+@extends('admin.dashboard')
+
+@section('content')
+
+    <main>
+        <div class="container-fluid px-4">
+
+            <section class="wrapper">
+                <div class="container-fostrap">
+                    <div>
+                        <h1 class="heading">
+                            Dashboard
+                        </h1>
+                    </div>
+                    <div class="content">
+                        <div class="container">
+                            <div class="row">
+
+                                <div class="col-xs-12 col-sm-4">
+                                    <div class="card">
+                                        <a class="img-card" href="dashboard/commands">
+                                            <img src="{{ asset('images/terminal.svg') }}" />
+                                        </a>
+                                        <div class="card-content">
+                                            <h4 class="card-title">
+                                                <a href="dashboard/commands"> Commands
+                                                </a>
+                                            </h4>
+                                            <p class="">
+                                                Create CRUD operations easily with Bloom. Click here to start immediately.
+                                            </p>
+                                        </div>
+                                        <div class="card-read-more">
+                                            <a href="dashboard/commands" class="btn btn-link btn-block">
+                                                Commands
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-xs-12 col-sm-4">
+                                    <div class="card">
+                                        <a class="img-card" href="dashboard/examples">
+                                            <img src="{{ asset('images/examples.svg') }}" />
+                                        </a>
+                                        <div class="card-content">
+                                            <h4 class="card-title">
+                                                <a href="dashboard/examples">Examples
+                                                </a>
+                                            </h4>
+                                            <p class="">
+                                                Need help with the generator? Here is a list of examples to help you.
+                                            </p>
+                                        </div>
+                                        <div class="card-read-more">
+                                            <a href="dashboard/examples" class="btn btn-link btn-block">
+                                                Examples
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-xs-12 col-sm-4">
+                                    <div class="card">
+                                        <a class="img-card" href="">
+                                            <img src="{{ asset('images/doc.svg') }}" />
+                                        </a>
+                                        <div class="card-content">
+                                            <h4 class="card-title">
+                                                <a href=""> Documentation
+                                                </a>
+                                            </h4>
+                                            <p class="">
+                                                If you have any more questions, please refer to the documentation.
+                                            </p>
+                                        </div>
+                                        <div class="card-read-more">
+                                            <a href="" class="btn btn-link btn-block">
+                                                Documentation
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+@endsection

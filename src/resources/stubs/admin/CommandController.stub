@@ -1,0 +1,305 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+
+class CommandController extends Controller
+{
+    public function index()
+    {
+        return view('admin.index');
+    }
+
+    public function commands()
+    {
+        $commands = $this->getCommandsAndDescriptions();
+
+        return view('admin.commands', compact('commands'));
+    }
+
+    public function show($commandName)
+    {
+
+        $modelPath = app_path('/Models');
+        $allModels = $this->getAllModels($modelPath);
+        $commandDescription = $this->getCommandsAndDescriptions($commandName);
+
+        return view('admin.command-details', compact('commandName', 'commandDescription', 'allModels'));
+    }
+
+    public function examples()
+    {
+        return view('admin.examples');
+    }
+
+    protected function execute($commandName, Request $request, $fromList = false)
+    {
+        // Validation
+        $request->validate([
+            'crudName' => 'required|string|max:30',
+            'relatedModel' => 'nullable|string|max:30',
+            'modelAttributes' => 'nullable|string|max:255',
+            'relationshipType' => 'nullable|string|max:15',
+        ]);
+
+        $crudName = $request->input('crudName');
+
+        if ($commandName === 'bloom:delete') {
+
+            $dropTable = $request->input('dropTable');
+            $pivotTable = $request->input('pivotTable');
+
+            if ($dropTable) {
+                $dropTableOption = ' --drop-table';
+            } else {
+                $dropTableOption = '';
+            }
+
+            if (!empty($pivotTable)) {
+                $pivotTableOption = " --pivot-table=$pivotTable";
+            } else {
+                $pivotTableOption = '';
+            }
+
+            $fullCommand = "$commandName $crudName" . $dropTableOption . $pivotTableOption;
+
+            return $this->commandCall($fullCommand, $crudName, $fromList);
+        }
+
+        if ($commandName === 'bloom:create') {
+            $relatedModel = $request->input('relatedModel');
+            $modelAttributes = $request->input('modelAttributes');
+            $relationshipType = $request->input('relationshipType');
+            $createViews = $request->input('createView');
+
+            if ($createViews) {
+                $viewOption = ' --create-view';
+            } else {
+                $viewOption = '';
+            }
+
+            if (!empty($relatedModel) && !empty($relationshipType)) {
+                config(['command_from_frontend' => true]);
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --related-model=$relatedModel --relation-type=$relationshipType --skip-relationships" . $viewOption;
+
+            } else {
+                $fullCommand = "$commandName $crudName \"$modelAttributes\" --skip-relationships" . $viewOption;
+            }
+            return $this->commandCall($fullCommand, $crudName, $fromList);
+        }
+
+        else return redirect()->back()->with('error', "Command execution failed. {$commandName} is not a valid command.");
+    }
+
+    protected function createdCruds()
+    {
+        // Tables to exclude from the display
+        $excludedTables = ['migrations', 'password_resets', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens'];
+
+        // Retrieve the list of tables in the database, excluding the specified tables
+        $tables = DB::select("SHOW TABLES");
+
+        // Extract table names from the result set
+        $filteredTables = array_column($tables, "Tables_in_" . config('database.connections.mysql.database'));
+
+        // Filter out excluded tables
+        $filteredTables = array_diff($filteredTables, $excludedTables);
+
+        $tableInfo = [];
+
+        foreach ($filteredTables as $table) {
+            $rows = DB::table($table)->count();
+            $tableInfo[] = [
+                'name' => $table,
+                'rows' => $rows,
+            ];
+        }
+
+        return view('admin.cruds', compact('tableInfo'));
+    }
+
+    protected function showTableData($tableName)
+    {
+        $tableData = DB::table($tableName)->get();
+
+        $tableColumns = Schema::getColumnListing($tableName);
+
+        $tableNameSingular = Str::singular($tableName);
+
+        return view('admin.cruds-data', compact('tableData', 'tableName', 'tableColumns', 'tableNameSingular'));
+    }
+
+    protected function tableDelete($tableName)
+    {
+        if (auth()->user()->is_admin === 0) {
+            return redirect()->back()->with('error', "You cannot delete tables from this page.");
+        }
+
+        $table = ucfirst(Str::singular($tableName));
+        $model = "App\\Models\\{$table}";
+        $commandName = 'bloom:delete';
+        $request = new Request([
+            'crudName' => $table,
+        ]);
+
+        if (class_exists($model)) {
+            $results = $model::all();
+        } else {
+            $results = null;
+        }
+
+        if (isset($results)) {
+            foreach ($results as $result) {
+                $imageAttribute = null;
+                $attributes = $result->getAttributes();
+
+                foreach ($attributes as $attribute => $value) {
+                    if (is_string($value) && @getimagesize($value)) {
+                        $imageAttribute = $attribute;
+                        break;
+                    }
+                }
+
+                if ($imageAttribute) {
+                    $imagePath = public_path($result->$imageAttribute);
+
+                    if (file_exists($imagePath)) {
+                        unlink($imagePath);
+                    }
+                }
+
+                $result->delete();
+            }
+        }
+
+        $this->execute($commandName, $request, true);
+
+        if (Schema::hasTable($tableName)) {
+            try {
+                Schema::dropIfExists($tableName);
+            } catch (QueryException $e) {
+                if ($e->errorInfo[0] === '23000') {
+                    return redirect()->back()->with('error', "Cannot delete entry because it has foreign keys. Please delete the related entries first.");
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        Artisan::call('route:clear');
+
+        return redirect()->back()->with('status', "Table ({$tableName}) deleted successfully.");
+    }
+
+    protected function migrate()
+    {
+        Artisan::call('migrate');
+        $output = Artisan::output();
+
+        if (str_contains($output, 'Error:')) {
+            return redirect()->back()->with('error', "Command execution failed: {$output}");
+        } else if (str_contains($output, 'Nothing to migrate.')) {
+            return redirect()->back()->with('error', "Nothing to migrate.");
+        } else {
+            Artisan::call('route:clear');
+            return redirect()->back()->with('status', "Command executed successfully: {$output}");
+        }
+
+    }
+
+    private function getCommandsAndDescriptions($specificCommand = null)
+    {
+        $commandsWithDescriptions = [];
+        $commands = collect(Artisan::all())->filter(function ($command, $key) {
+            return Str::startsWith($key, 'bloom:');
+        });
+
+        foreach ($commands as $key => $command) {
+            $parts = explode(':', $key, 2);
+            $commandName = count($parts) > 1 ? $parts[1] : $key;
+
+            try {
+                if ($specificCommand === null || $specificCommand === $key) {
+                    Artisan::call('help', ['command_name' => $key]);
+                    $description = Artisan::output();
+
+                    $commandsWithDescriptions[] = [
+                        'name' => $commandName,
+                        'key' => $key,
+                        'description' => $description,
+                    ];
+
+                    if ($specificCommand === $key) {
+                        return $description;
+                    }
+                }
+            } catch (\Exception $e) {
+                $description = 'Command description not available.';
+            }
+        }
+
+        return $specificCommand ? 'Command not found.' : $commandsWithDescriptions;
+    }
+
+    private function getAllModels($path)
+    {
+        $models = [];
+        $modelsResults = scandir($path);
+
+        foreach ($modelsResults as $model) {
+            if ($model === '.' || $model === '..') continue;
+
+            $name = $model;
+
+            if (is_dir($path . '/' . $name)) {
+                $models = array_merge($models, $this->getAllModels(app_path('/Models/' . $name)));
+            } else {
+                $models[] = substr($name, 0, -4);
+            }
+        }
+        return $models;
+    }
+
+    public function commandCall($fullCommand, $crudName, $fromList)
+    {
+        Artisan::call($fullCommand);
+
+        $output = Artisan::output();
+
+        if ($fromList) {
+            return $output;
+        } else {
+            // Check if the command was executed successfully
+            if (str_starts_with($output, 'ERROR 1:')) {
+                return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
+            } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {
+                return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD created.");
+            } elseif (str_starts_with($output, 'DELETION SUCCESS:')) {
+                return redirect()->back()->with('status', "Command executed successfully! {$crudName} CRUD deleted.");
+            } elseif (str_starts_with($output, 'ERROR 3:')) {
+                return redirect()->back()->with('error', "Command execution failed. Nothing to delete.");
+            } elseif (str_starts_with($output, 'ERROR 2:')) {
+                return redirect()->back()->with('error', "Not supported attribute type found. Please check if you have entered the attributes correctly.");
+            } elseif (str_starts_with($output, 'ERROR 4:')) {
+                return redirect()->back()->with('error', "The table does not exist in the database.");
+            } elseif (str_starts_with($output, 'ERROR 5:')) {
+                return redirect()->back()->with('error', "The pivot table name is required.");
+            } elseif (str_starts_with($output, 'ERROR 6:')) {
+                return redirect()->back()->with('error', "The provided pivot table does not exist in the database.");
+            } elseif (str_starts_with($output, 'ERROR 7:')) {
+                return redirect()->back()->with('error', "Constraint violation. {$output}");
+            } elseif (str_starts_with($output, 'ERROR 8:')) {
+                return redirect()->back()->with('error', "An error occurred while deleting the table. {$output}");
+            } else {
+                return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
+            }
+        }
+    }
+}

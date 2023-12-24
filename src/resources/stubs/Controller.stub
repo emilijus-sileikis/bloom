@@ -1,0 +1,178 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\{{modelName}};
+use App\Http\Requests\{{modelName}}Request;
+{{relatedModelUseField}}
+
+class {{modelName}}Controller extends Controller
+{
+    public function index()
+    {
+        ${{modelNameLowerCase}} = {{modelName}}::all();
+
+        return view('{{modelNameLowerCase}}.index', compact('{{modelNameLowerCase}}'));
+    }
+
+    public function create()
+    {
+       {{relatedModelSelect}}
+       $flags = json_decode('{{flags}}', true);
+       $fieldTypes = {{modelName}}::getFieldTypes();
+
+       $formRequest = new {{modelName}}Request();
+       $requiredRules = [];
+       $maxRules = [];
+       $minRules = [];
+
+       $this->handleFrontRules($formRequest, $requiredRules, $maxRules, $minRules);
+
+       $inputFieldTypes = {{modelName}}::mapFieldTypes($fieldTypes);
+
+        return view('admin.{{modelNameLowerCase}}.create-{{modelNameSingularLowerCase}}', compact('inputFieldTypes', 'flags', 'requiredRules', 'minRules', 'maxRules'{{relatedCompact}}));
+    }
+
+    public function store({{modelName}}Request $request)
+    {
+        $data = $request->all();
+
+        $imageFieldName = null;
+        $imageDir = 'uploads/'.$data['modelName'];
+
+        foreach ($request->all() as $field => $value) {
+            if ($value instanceof \Illuminate\Http\UploadedFile) {
+                $imageFieldName = $field;
+                break;
+            }
+        }
+
+        if ($imageFieldName !== null && $request->hasFile($imageFieldName)) {
+                    $image = $request->file($imageFieldName);
+                    $ext = $image->getClientOriginalExtension();
+                    $name = uniqid().'.'.$ext;
+                    $path = $image->move($imageDir, $name);
+                    $data[$imageFieldName] = $path;
+        }
+
+        ${{modelNameSingularLowerCase}} = {{modelName}}::create($data);
+
+        {{belongsToMany}}
+
+        return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
+    }
+
+    public function show({{modelName}} ${{modelNameSingularLowerCase}})
+    {
+        return view('{{modelNameLowerCase}}.show', compact('{{modelNameSingularLowerCase}}'));
+    }
+
+    public function edit($id)
+    {
+        {{relatedModelSelect}}
+        ${{modelNameSingularLowerCase}} = {{modelName}}::findOrFail($id);
+        $fieldTypes = {{modelName}}::getFieldTypes();
+        $flags = json_decode('{{flags}}', true);
+
+        $formRequest = new {{modelName}}Request();
+        $requiredRules = [];
+        $maxRules = [];
+        $minRules = [];
+
+        $this->handleFrontRules($formRequest, $requiredRules, $maxRules, $minRules);
+
+        // Exclude the id field
+        unset($fieldTypes['id']);
+
+        $fields = {{modelName}}::mapFieldTypes($fieldTypes);
+
+        return view('admin.{{modelNameLowerCase}}.edit-{{modelNameSingularLowerCase}}', compact('{{modelNameSingularLowerCase}}', 'fields', 'flags'{{relatedCompact}}));
+    }
+
+    public function update({{modelName}}Request $request, $id)
+    {
+        ${{modelNameSingularLowerCase}} = {{modelName}}::findOrFail($id);
+        $data = $request->all();
+        $imageFieldName = null;
+        $imageDir = 'uploads/'.$data['modelName'];
+
+        foreach ($request->all() as $field => $value) {
+            if ($value instanceof \Illuminate\Http\UploadedFile) {
+                $imageFieldName = $field;
+                break;
+            }
+        }
+
+        if ($imageFieldName !== null) {
+            if ($request->hasFile($imageFieldName)) {
+                $image = $request->file($imageFieldName);
+
+                if ($image->isFile()) {
+                    $ext = $image->getClientOriginalExtension();
+                    $name = uniqid().'.'.$ext;
+                    $path = $image->move($imageDir, $name);
+                    $data[$imageFieldName] = $path;
+
+                    // Delete old file
+                    if (${{modelNameSingularLowerCase}}->$imageFieldName) {
+                        $oldPath = public_path(${{modelNameSingularLowerCase}}->$imageFieldName);
+
+                        if (file_exists($oldPath)) {
+                            unlink($oldPath);
+                        }
+                    }
+                }
+            } else {
+                $data[$imageFieldName] = ${{modelNameSingularLowerCase}}->$imageFieldName;
+            }
+        }
+
+        ${{modelNameSingularLowerCase}}->update($data);
+
+        {{belongsToMany}}
+
+        return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
+    }
+
+    public function destroy($id)
+    {
+        ${{modelNameSingularLowerCase}} = {{modelName}}::findOrFail($id);
+        $imageAttribute = null;
+        $attributes = ${{modelNameSingularLowerCase}}->getAttributes();
+
+        foreach ($attributes as $attribute => $value) {
+            if (is_string($value) && @getimagesize($value)) {
+                $imageAttribute = $attribute;
+                break;
+            }
+        }
+
+        if ($imageAttribute) {
+            $imagePath = public_path(${{modelNameSingularLowerCase}}->$imageAttribute);
+
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+            }
+        }
+
+        ${{modelNameSingularLowerCase}}->delete();
+
+        return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
+    }
+
+    private function handleFrontRules($formRequest, &$requiredRules, &$maxRules, &$minRules) {
+        foreach ($formRequest->rules() as $field => $rules) {
+            if (str_contains($rules, 'required')) {
+                $requiredRules[$field] = 'required';
+            }
+
+            if (preg_match('/max:(\d+)/', $rules, $matches)) {
+                $maxRules[$field] = 'max:' . $matches[1];
+            }
+
+            if (preg_match('/min:(\d+)/', $rules, $matches)) {
+                $minRules[$field] = 'min:' . $matches[1];
+            }
+        }
+    }
+}
