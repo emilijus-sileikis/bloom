@@ -628,7 +628,11 @@ class BloomCreate extends Command
         $entityName = strtolower($name);
         $entityNamePlural = strtolower(Str::plural($name));
         $entityNameLowerPlural = strtolower($entityNamePlural);
-        $relatedName = strtolower($relatedModel);
+        if (isset($relatedModel)) {
+            $relatedName = strtolower($relatedModel);
+        } else {
+            $relatedName = 'filler';
+        }
         $showRelated = "false";
 
         if (!file_exists($path = resource_path("/views/{$entityNameLowerPlural}/")))

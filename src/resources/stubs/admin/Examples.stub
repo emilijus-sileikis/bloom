@@ -131,7 +131,26 @@
                             <div>
                                 <div id="subsection1" class="ml-3">
                                     <h3>Creating a full CRUD via terminal</h3>
-                                    <p>Content for Create subsection.</p>
+                                    <p>Creating a CRUD via terminal is as simple as typing in a few sentences. Below you can find a step-by-step guide on how to create a full CRUD via the terminal commands.</p>
+                                    <p>In this example we are going to create a <b>one-to-many</b> relation between an <b>Author</b> and a <b>Post</b>. We will also use the <em>--create-view</em> flag to create a simple frontend view for our posts.</p>
+
+                                    <b>Here is what to do:</b>
+                                    <ul>
+                                        <li style="list-style: decimal;">Type in the <b>create command</b> and the required parameters: <em>php artisan bloom:create Author "name:string|required|max:30"</em>.</li>
+                                        <li style="list-style: decimal;">For now, select no when asked if we want to create a relation.</li>
+                                        <li style="list-style: decimal;">Type in the create command again and create the Post CRUD:<em>php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|required|max:20000" --create-view</em>.</li>
+                                        <li style="list-style: decimal;">Select yes when asked if you want to create a relation.</li>
+                                        <li style="list-style: decimal;">Enter the name of the CRUD we created earlier:.<em>Author</em>.</li>
+                                        <li style="list-style: decimal;">For the relation type, chose the one that best suits your needs:.<em>N:1</em>. The terminal will show the selected relation and ask if this is what you want to select. In out case it will show: <em>Post belongsTo Author</em>
+                                            which is what we need, so we type in <b>yes</b>.</li>
+                                        <li style="list-style: decimal;">Select no when asked if we want to create another relation.</li>
+                                    </ul>
+
+                                    <p>That is it! Now all you have to do is run the migration and everything will appear. To run the migration you can type: <em>php artisan migrate</em> into the terminal.</p>
+
+                                    <p>Now, let us go to the <b>pages</b> page and create a new author and some posts. To do that just click on the <b>View</b> button and then select <b>Create</b> in the newly opened screen.</p>
+                                    <p>After creating the author and a post we can proceed to the created view to see if the post appear on the frontend. Type in <em>/posts</em> in your website URL or just use the <em>Show</em> button in the pages section to see the created posts.</p>
+                                    <p>From here you can edit the views as you want to fit your needs.</p>
                                 </div>
                                 <div id="subsection2" class="ml-3">
                                     <h3>Creating a full CRUD via dashboard</h3>
@@ -143,7 +162,7 @@
                                 </div>
                                 <div id="subsection4" class="ml-3">
                                     <h3>Other notes</h3>
-                                    <p>Content for Delete subsection.</p>
+                                    <p><b>TBA</b></p>
                                 </div>
                             </div>
                         </div>
