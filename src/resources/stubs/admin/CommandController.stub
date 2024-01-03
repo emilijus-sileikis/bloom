@@ -145,6 +145,10 @@ class CommandController extends Controller
         $table = ucfirst(Str::singular($tableName));
         $model = "App\\Models\\{$table}";
         $commandName = 'bloom:delete';
+        $migrationFiles = scandir(database_path('migrations'));
+        $tableNameSingular = strtolower($tableName);
+        $patternForMigration = "/_create_(\w+)_{$tableNameSingular}_table.php/";
+        $patternForMigration2 = "/_create_{$tableNameSingular}_(\w+)_table.php/";
         $request = new Request([
             'crudName' => $table,
         ]);
@@ -153,6 +157,18 @@ class CommandController extends Controller
             $results = $model::all();
         } else {
             $results = null;
+        }
+
+        if (Schema::hasTable($tableName)) {
+            try {
+                Schema::dropIfExists($tableName);
+            } catch (QueryException $e) {
+                if ($e->errorInfo[0] === '23000') {
+                    return redirect()->back()->with('error', "Cannot delete entry because it has foreign keys. Please delete the related entries first.");
+                } else {
+                    throw $e;
+                }
+            }
         }
 
         if (isset($results)) {
@@ -181,16 +197,18 @@ class CommandController extends Controller
 
         $this->execute($commandName, $request, true);
 
-        if (Schema::hasTable($tableName)) {
-            try {
-                Schema::dropIfExists($tableName);
-            } catch (QueryException $e) {
-                if ($e->errorInfo[0] === '23000') {
-                    return redirect()->back()->with('error', "Cannot delete entry because it has foreign keys. Please delete the related entries first.");
-                } else {
-                    throw $e;
-                }
+        foreach ($migrationFiles as $migrationFile) {
+            if (str_contains($migrationFile, "_create_{$tableName}_table.php") ||
+                str_contains($migrationFile, "_id_to_{$tableName}_table.php") ||
+                preg_match($patternForMigration, $migrationFile) ||
+                preg_match($patternForMigration2, $migrationFile)) {
+                $migrationName = str_replace('.php', '', $migrationFile);
+                $migrationsToDelete[] = $migrationName;
             }
+        }
+
+        if (!empty($migrationsToDelete)) {
+            DB::table('migrations')->whereIn('migration', $migrationsToDelete)->delete();
         }
 
         Artisan::call('route:clear');

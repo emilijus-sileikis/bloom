@@ -50,6 +50,7 @@ class BloomDelete extends Command
      */
     protected function bloomDelete($name)
     {
+
         $tableName = strtolower(Str::plural($name));
         $tableNameSingular = strtolower($name);
         $migrationFiles = scandir(database_path('migrations'));
@@ -230,15 +231,18 @@ class BloomDelete extends Command
     {
         $models = [];
         $pathToModel = app_path("Models/{$name}.php");
-        $modelContent = file_get_contents($pathToModel);
 
-        preg_match_all('/\'App\\\\Models\\\\[^\\\']*\'/', $modelContent, $matches);
+        if (file_exists($pathToModel)) {
+            $modelContent = file_get_contents($pathToModel);
 
-        foreach ($matches[0] as $match) {
-            $modelParts = explode('\\', $match);
-            $modelLastPart = end($modelParts);
-            $modelNames = str_replace("'", '', STR::lower($modelLastPart));
-            $models[] = $modelNames;
+            preg_match_all('/\'App\\\\Models\\\\[^\\\']*\'/', $modelContent, $matches);
+
+            foreach ($matches[0] as $match) {
+                $modelParts = explode('\\', $match);
+                $modelLastPart = end($modelParts);
+                $modelNames = str_replace("'", '', STR::lower($modelLastPart));
+                $models[] = $modelNames;
+            }
         }
 
         return $models;
