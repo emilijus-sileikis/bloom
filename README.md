@@ -19,7 +19,7 @@ Laravel 10 CRUD Generator
 
 3. Run:
     ```
-    composer require emilijus/bloom:dev-master
+    composer require emilijus/bloom
     ```
 
 4. Publish the vendor files:
