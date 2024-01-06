@@ -25,5 +25,5 @@
             ]
         }
     },
-    "minimum-stability": "alpha"
+    "minimum-stability": "stable"
 }
