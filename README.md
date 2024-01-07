@@ -92,9 +92,12 @@ These validation parameters are supported for command input:
 * max: - for maximum character limit/number value
 * min: - for minimum character limit/number value
 * size: - for maximum picture size
-* required - for the field to be required (this is default if nullable is not set!!)
+* required - for the field to be required
+* nullable - for the field to be not required (this is the default if required is not set!)
 
 For images the mime types are set automatically (for now) they are: jpeg, png, jpg and gif.
+# For images, it is recommended to use nullable (do not provide the required parameter when creating a CRUD with an image attribute). 
+For example: ```php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view```.
 
 ### CRUD creation via terminal example
 TBA
