@@ -86,7 +86,7 @@ class {{modelName}}Controller extends Controller
 
         $fields = {{modelName}}::mapFieldTypes($fieldTypes);
 
-        return view('admin.{{modelNameLowerCase}}.edit-{{modelNameSingularLowerCase}}', compact('{{modelNameSingularLowerCase}}', 'fields', 'flags'{{relatedCompact}}));
+        return view('admin.{{modelNameLowerCase}}.edit-{{modelNameSingularLowerCase}}', compact('{{modelNameSingularLowerCase}}', 'fields', 'flags', 'requiredRules', 'minRules', 'maxRules'{{relatedCompact}}));
     }
 
     public function update({{modelName}}Request $request, $id)

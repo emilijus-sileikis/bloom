@@ -3,9 +3,11 @@
         <div class="d-flex align-items-center justify-content-between small">
             <div class="text-muted">Copyright &copy; Bloom 2023</div>
             <div>
-                <a href="#">Github</a>
+                <a href="https://github.com/emilijus-sileikis/bloom" target="_blank">Github</a>
                 &middot;
-                <a href="#">Documentation</a>
+                <a href="https://github.com/emilijus-sileikis/bloom/blob/master/README.md" target="_blank">Documentation</a>
+                &middot;
+                <a href="https://packagist.org/packages/emilijus/bloom" target="_blank">Packagist</a>
             </div>
         </div>
     </div>

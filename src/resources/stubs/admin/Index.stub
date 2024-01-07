@@ -67,16 +67,16 @@
                                         </a>
                                         <div class="card-content">
                                             <h4 class="card-title">
-                                                <a href=""> Documentation
+                                                <a href="dashboard/cruds"> CRUDS
                                                 </a>
                                             </h4>
                                             <p class="">
-                                                If you have any more questions, please refer to the documentation.
+                                                Already have CRUDS created? Check out all created CRUD database tables here.
                                             </p>
                                         </div>
                                         <div class="card-read-more">
-                                            <a href="" class="btn btn-link btn-block">
-                                                Documentation
+                                            <a href="dashboard/cruds" class="btn btn-link btn-block">
+                                                CRUDS
                                             </a>
                                         </div>
                                     </div>

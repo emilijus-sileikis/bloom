@@ -65,8 +65,8 @@
                                     <ul class="list-group list-group-flush">
                                         <li class="list-group-item"><a href="#subsection1" class="list-group-item-action">Creating a full CRUD via terminal</a></li>
                                         <li class="list-group-item"><a href="#subsection2" class="list-group-item-action">Creating a full CRUD via dashboard</a></li>
-                                        <li class="list-group-item"><a href="#subsection3" class="list-group-item-action">Image handling</a></li>
-                                        <li class="list-group-item"><a href="#subsection4" class="list-group-item-action">Other notes</a></li>
+                                        <li class="list-group-item"><a href="#subsection3" class="list-group-item-action">Deleting a CRUD via terminal</a></li>
+                                        <li class="list-group-item"><a href="#subsection4" class="list-group-item-action">Deleting a CRUD via dashboard</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -105,8 +105,8 @@
                             </ul>
                             Creation command also has a few <b>flags</b> that can be used to customize the process of creating a CRUD module. The flags are as follows:
                             <ul>
-                                <li><b>--create-view:</b> This flag is used if a user wants to generate front ended views for the CRUD that a regular user could see. </li>
-                                <li><b>--skip-relationships:</b> This flag is used if a user prefers to skip crating relations between two models and just create a carcass. </li>
+                                <li><b>--create-view:</b> This flag is used if a user wants to generate a carcass of front ended views for the CRUD that a regular user could see. </li>
+                                <li><b>--skip-relationships:</b> This flag is used if a user prefers to skip creating relations between two models and just create a carcass. </li>
                             </ul>
                             </p>
                         </div>
@@ -138,7 +138,7 @@
                                     <ul>
                                         <li style="list-style: decimal;">Type in the <b>create command</b> and the required parameters: <em>php artisan bloom:create Author "name:string|required|max:30"</em>.</li>
                                         <li style="list-style: decimal;">For now, select no when asked if we want to create a relation.</li>
-                                        <li style="list-style: decimal;">Type in the create command again and create the Post CRUD:<em>php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|required|max:20000" --create-view</em>.</li>
+                                        <li style="list-style: decimal;">Type in the create command again and create the Post CRUD:<em>php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view</em>.</li>
                                         <li style="list-style: decimal;">Select yes when asked if you want to create a relation.</li>
                                         <li style="list-style: decimal;">Enter the name of the CRUD we created earlier:.<em>Author</em>.</li>
                                         <li style="list-style: decimal;">For the relation type, chose the one that best suits your needs:.<em>N:1</em>. The terminal will show the selected relation and ask if this is what you want to select. In out case it will show: <em>Post belongsTo Author</em>
@@ -154,15 +154,47 @@
                                 </div>
                                 <div id="subsection2" class="ml-3">
                                     <h3>Creating a full CRUD via dashboard</h3>
-                                    <p>Content for Read subsection.</p>
+                                    <p>To create a CRUD from the dashboard all you have to do is go to: <a href="/dashboard/commands/bloom:create">Create</a> command and follow the instructions there. </p>
+
+                                    <p>For our example we would do these steps: </p>
+
+                                    <ul>
+                                        <li style="list-style: decimal;">Type in the <b>Name</b> into the name field: <em>Author</em>.</li>
+                                        <li style="list-style: decimal;">Type in the <b>Attributes</b> for the Author CRUD: <em>name:string|required|max:30</em>.</li>
+                                        <li style="list-style: decimal;">Click on <b>Execute Command</b>.</li>
+                                        <li style="list-style: decimal;">Type in the <b>Name</b> into the name field for the second CRUD: <em>Post</em>.</li>
+                                        <li style="list-style: decimal;">Type in the <b>Attributes</b> for the Post CRUD: <em>title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000</em>.</li>
+                                        <li style="list-style: decimal;">Select the <b>Create Views</b> checkbox.</li>
+                                        <li style="list-style: decimal;">Select the <b>Create Relations</b> checkbox.</li>
+                                        <li style="list-style: decimal;">Select the <b>Relationship Type</b> from the dropdown. (To check if the relation is correct see the green text below the input field).</li>
+                                        <li style="list-style: decimal;">Click on <b>Execute Command</b>.</li>
+                                    </ul>
+
+                                    <p>
+                                        After creating a CRUD you can go to: <a href="/dashboard/cruds">CRUDs</a> to migrate and see the created elements.
+                                        In order to create, edit or delete new elements for the created CRUD you can press on the <em>"View"</em> button in the <a href="/dashboard/cruds">CRUDs</a> page.
+                                        If you also created the carcass of the front-end views you can press on the <em>"Show"</em> button in the <a href="/dashboard/cruds">CRUDs</a> page to see the created views.
+                                    </p>
                                 </div>
                                 <div id="subsection3" class="ml-3">
-                                    <h3>Image handling</h3>
-                                    <p>Content for Update subsection.</p>
+                                    <h3>Deleting a CRUD via terminal</h3>
+                                    <p>To delete a CRUD via terminal you need to provide the name into the command.</p>
+                                    <p>For example: <em>php artisan bloom:delete Post</em>. In addition, if we want to also remove the database tables for that CRUD
+                                    we need to specify the drop tables flag: <em>php artisan bloom:delete Post --drop-tables</em>.</p>
+                                    <p><b>IMPORTANT! </b>If you have a N:M relation and want to delete the tables, you will have to also provide the pivot table name: <em>php artisan bloom:delete Post --drop-tables --pivot-table=author_post</em>.</p>
                                 </div>
                                 <div id="subsection4" class="ml-3">
-                                    <h3>Other notes</h3>
-                                    <p><b>TBA</b></p>
+                                    <h3>Deleting a CRUD via dashboard</h3>
+                                    <p>To delete a CRUD all you need to do is select the CRUD from the dropdown in the <a href="/dashboard/commands/bloom:delete">Delete</a> command.</p>
+                                    <p>In addition, if we want to <b>delete the database tables</b> as well, we would need to check the <em>drop tables</em> checkbox.</p>
+                                    <p><b>IMPORTANT! </b>If you have a N:M relation and want to delete the tables, you will have to also provide the pivot table name.</p>
+                                    <p>For our example we would do these steps: </p>
+
+                                    <ul>
+                                        <li style="list-style: decimal;">Select the <b>Name</b> of the CRUD you want to delete.</li>
+                                        <li style="list-style: decimal;">Select the <b>drop table</b> checkbox if needed.</li>
+                                        <li style="list-style: decimal;">Type in the <b>pivot table</b> name if needed.</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
