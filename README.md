@@ -96,7 +96,7 @@ These validation parameters are supported for command input:
 * nullable - for the field to be not required (this is the default if required is not set!)
 
 For images the mime types are set automatically (for now) they are: jpeg, png, jpg and gif.
-# For images, it is recommended to use nullable (do not provide the required parameter when creating a CRUD with an image attribute). 
+#### For images, it is recommended to use nullable (do not provide the required parameter when creating a CRUD with an image attribute). 
 For example: ```php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view```.
 
 ### CRUD creation via terminal example
