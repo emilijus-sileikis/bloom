@@ -105,17 +105,53 @@ Creating a CRUD via terminal is as simple as typing in a few sentences. Below yo
 
 Here is what to do:
 
-* Type in the <b>create command</b> and the required parameters: <em>php artisan bloom:create Author "name:string|required|max:30"</em>.
+* Type in the <b>create command</b> and the required parameters: ```php artisan bloom:create Author "name:string|required|max:30"```.
 * For now, select no when asked if we want to create a relation.
-* Type in the create command again and create the Post CRUD:<em>php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view</em>.
+* Type in the create command again and create the Post CRUD:```php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view```.
 * Select yes when asked if you want to create a relationship.
-* Enter the name of the CRUD we created earlier:.<em>Author</em>.
-* For the relation type, choose the one that best suits your needs: <em>N:1</em>. The terminal will show the selected relation and ask if this is what you want to select. In our case it will show: <em>Post belongsTo Author</em> which is what we need, so we type in <b>yes</b>.
-* Select no when asked if we want to create another relation.
+* Enter the name of the CRUD we created earlier: ```Author```.
+* For the relation type, choose the one that best suits your needs: ```N:1```. The terminal will show the selected relation and ask if this is what you want to select. In our case it will show: ```Post belongsTo Author``` which is what we need, so we type in <b>yes</b>.
+* Select no when asked if we want to create another relationship.
 
-That is it! Now all you have to do is run the migration and everything will appear. To run the migration you can type: <em>php artisan migrate</em> into the terminal.
+That is it! Now all you have to do is run the migration and everything will appear. To run the migration you can type: ```php artisan migrate``` into the terminal.
 
-Now, let us go to the <b>pages</b> page and create a new author and some posts. To do that just click on the <b>View</b> button and then select <b>Create</b> in the newly opened screen. After creating the author and a post we can proceed to the created view to see if the post appears on the frontend. Type in <em>/posts</em> in your website URL or just use the <em>Show</em> button in the pages section to see the created posts. From here you can edit the views as you want to fit your needs.
+Now, let us go to the <b>pages</b> page and create a new author and some posts. To do that just click on the <b>View</b> button and then select <b>Create</b> in the newly opened screen. After creating the author and a post we can proceed to the created view to see if the post appears on the frontend. Type in ```/posts``` in your website URL or just use the <em>Show</em> button in the pages section to see the created posts. From here you can edit the views as you want to fit your needs.
 
 ### CRUD creation via dashboard example
-TBA
+
+To create a CRUD from the dashboard all you have to do is go to the commands section, select the <b>Create</b> command, and follow the instructions there.
+
+For our example, we would do these steps:
+
+* Type in the <b>Name</b> into the name field: ```Author```.
+* Type in the <b>Attributes</b> for the Author CRUD: ```name:string|required|max:30```.
+* Click on <b>Execute Command</b>.
+* Type in the <b>Name</b> into the name field for the second CRUD: ```Post```.
+* Type in the <b>Attributes</b> for the Post CRUD: ```title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000```.
+* Select the <b>Create Views</b> checkbox.
+* Select the <b>Create Relations</b> checkbox.
+* Select the <b>Relationship Type</b> from the dropdown. (To check if the relation is correct see the green text below the input field).
+* Click on <b>Execute Command</b>.
+
+After creating a CRUD you can go to the <b>pages section</b> to migrate and see the created elements. To create, edit, or delete new elements for the created CRUD you can press the ```"View"``` button on that page. If you also created the carcass of the front-end views you can press on the ```"Show"``` button in the <b>pages section</b> to see the created views.
+
+### CRUD deletion via terminal example
+
+To delete a CRUD via terminal you need to provide the name for the command.
+
+For example: ```php artisan bloom:delete Post```. In addition, if we want to also remove the database tables for that CRUD we need to specify the drop tables flag: ```php artisan bloom:delete Post --drop-tables```.
+
+<b>IMPORTANT!</b> If you have an N:M relation and want to delete the tables from the database as well, you will have to also provide the pivot table name: ```php artisan bloom:delete Post --drop-tables --pivot-table=author_post```.
+
+### CRUD deletion via dashboard example
+
+To delete a CRUD all you need to do is select the CRUD from the dropdown in the <b>Delete</b> command.
+
+In addition, if you want to <b>delete the database tables</b> as well, we would need to check the ```drop tables``` checkbox.
+<b>IMPORTANT!</b> If you have an N:M relation and want to delete the database tables, you will have to also provide the pivot table name.
+
+For our example, we would do these steps:
+
+* Select the <b>Name</b> of the CRUD you want to delete.
+* Select the <b>drop table</b> checkbox.
+* We would leave the pivot table name empty (since our relation was not N:M).
