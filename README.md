@@ -100,7 +100,22 @@ For images the mime types are set automatically (for now) they are: jpeg, png, j
 For example: ```php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view```.
 
 ### CRUD creation via terminal example
-TBA
+
+Creating a CRUD via terminal is as simple as typing in a few sentences. Below you can find a step-by-step guide on how to create a full CRUD via the terminal commands. In this example, we are going to create a <b>one-to-many</b> relation between an <b>Author</b> and a <b>Post</b>. We will also use the <em>--create-view</em> flag to create a simple front-end view for our posts.
+
+Here is what to do:
+
+* Type in the <b>create command</b> and the required parameters: <em>php artisan bloom:create Author "name:string|required|max:30"</em>.
+* For now, select no when asked if we want to create a relation.
+* Type in the create command again and create the Post CRUD:<em>php artisan bloom:create Post "title:string|required|max:30, description:text|required|max:255, photo:binary|max:20000" --create-view</em>.
+* Select yes when asked if you want to create a relationship.
+* Enter the name of the CRUD we created earlier:.<em>Author</em>.
+* For the relation type, choose the one that best suits your needs: <em>N:1</em>. The terminal will show the selected relation and ask if this is what you want to select. In our case it will show: <em>Post belongsTo Author</em> which is what we need, so we type in <b>yes</b>.
+* Select no when asked if we want to create another relation.
+
+That is it! Now all you have to do is run the migration and everything will appear. To run the migration you can type: <em>php artisan migrate</em> into the terminal.
+
+Now, let us go to the <b>pages</b> page and create a new author and some posts. To do that just click on the <b>View</b> button and then select <b>Create</b> in the newly opened screen. After creating the author and a post we can proceed to the created view to see if the post appears on the frontend. Type in <em>/posts</em> in your website URL or just use the <em>Show</em> button in the pages section to see the created posts. From here you can edit the views as you want to fit your needs.
 
 ### CRUD creation via dashboard example
 TBA
