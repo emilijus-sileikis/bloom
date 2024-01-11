@@ -64,13 +64,11 @@ class BloomCreate extends Command
      */
     protected function bloomCreate($name, $attributes, $relationType, $relatedModel, $flags)
     {
-        // File existence check
         if ($this->fileExistence($name)) {
             $this->error("ERROR 1: {$name} CRUD already exists.");
             return;
         }
 
-        // Command was launched from terminal
         if (!$this->option('skip-relationships')) {
             if ($this->confirm('Do you want to create a relationship between this and another model?')) {
                 $this->makeRelationship($name, $relationType, $relatedModel, $attributes, $flags);
@@ -78,11 +76,9 @@ class BloomCreate extends Command
                 $this->initiateFileCreation($name, $attributes, $relatedModel, $relationType, $flags);
             }
         } else {
-            // Create the relation
             $this->makeRelationship($name, $relationType, $relatedModel, $attributes, $flags);
         }
 
-        // Adding the resource routes
         if ($this->option('create-view')) {
             $this->createView($name, $relatedModel, $relationType);
 
@@ -186,18 +182,15 @@ class BloomCreate extends Command
     {
         $normalisedAttributes = explode(',', $attributes);
 
-        // Get the names of the attributes
         $attributeNames = array_map(function ($attribute) {
             list($name) = explode(':', $attribute);
             return $name;
         }, $normalisedAttributes);
 
-        // Trim to remove any whitespace and add tabs for formatting
         $fillables = array_map(function ($attribute) {
             return "\t\t'" . trim($attribute) . "'";
         }, $attributeNames);
 
-        // Add the related model id if the relationship exists
         if ($relatedModel && $relationType !== 'belongsToMany' && $relationType !== 'hasMany')
         {
             $fillables[] = "\t\t'" . strtolower($relatedModel) . "_id'";
@@ -232,7 +225,6 @@ class BloomCreate extends Command
         $attributePairs = explode(", ", $attributes);
         $result = [];
 
-        // Take the names of the attributes and create a string of rules
         foreach ($attributePairs as $pair) {
             list($attrName, $rules) = array_pad(explode(":", $pair, 2), 2, 'string');
 
@@ -300,7 +292,6 @@ class BloomCreate extends Command
             $this->initiateFileCreation($name, $attributes, $relatedModel, $relationshipType, $flags);
         } else {
 
-            // Multiple relatinoships can be created
             while (true) {
                 $relatedModel = $this->ask("Enter the related model name (e.g., User) (Make sure that the model exists!):");
 
@@ -333,7 +324,6 @@ class BloomCreate extends Command
             $this->initiateFileCreation($name, $attributes, $relatedModel, $relationshipType, $flags);
         }
 
-        // Handle the relationships
         foreach ($relationships as $relationship) {
             $this->updateModelRelationship($name, $relationship['relatedModel'], $relationshipType, false, $flags);
         }
@@ -354,26 +344,7 @@ class BloomCreate extends Command
         $relationshipMethodName = strtolower($relatedModel);
         $relatedModelClass = ucfirst($relatedModel);
         $foreignKeyName = strtolower($relatedModel) . '_id';
-        $nameLower = strtolower($name);
         $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass', 'id', '$foreignKeyName'";
-
-//        if ($relationshipType === 'hasMany') {
-//            $foreignKeyName = strtolower($name) . '_id';
-//            $relatedPath = app_path("/Models/{$relatedModel}.php");
-//            $relatedFunc = "    public function $nameLower()\n    {\n        return \$this->belongsTo('App\Models\\$name', '$foreignKeyName', 'id');\n    }\n";
-//
-//            if (file_exists($relatedPath)) {
-//                $relatedContents = file_get_contents($relatedPath);
-//
-//                $closingBracketPosition = strrpos($relatedContents, '}');
-//
-//                if ($closingBracketPosition !== false) {
-//                    $relatedContents = substr_replace($relatedContents, $relatedFunc, $closingBracketPosition, 0);
-//                }
-//
-//                file_put_contents($relatedPath, $relatedContents);
-//            }
-//        }
 
         if ($relationshipType === 'hasMany') {
             $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass', '$foreignKeyName', 'id'";
@@ -392,14 +363,12 @@ class BloomCreate extends Command
             $mainPart = "        return \$this->$relationshipType('App\Models\\$relatedModelClass'";
         }
 
-        // Content that will be added to the model
         $relationshipContent = "\n    public function $relationshipMethodName()\n";
         $relationshipContent .= "    {\n";
         $relationshipContent .= $mainPart;
         $relationshipContent .= ");\n";
         $relationshipContent .= "    }\n";
 
-        // Insert the relationship method into the model class
         $modelContents = preg_replace(
             "/(class $name extends Model\n{)/",
             "$1$relationshipContent",
@@ -410,11 +379,9 @@ class BloomCreate extends Command
 
         $this->info("Updated $name model with $relationshipType relationship to $relatedModel.");
 
-        // Create a migration for foreign keys when needed
         if ($relationshipType === 'belongsTo' || $relationshipType === 'hasOne' || $relationshipType === 'hasMany') {
             $this->createForeignKeyMigration($name, $relatedModel, $foreignKeyName, $relationshipType);
         }
-        // Create a pivot migration for N:M relationships
         if ($relationshipType === "belongsToMany" && !$skipMigration) {
             $this->createPivotMigration($name, $relatedModel);
 
@@ -435,12 +402,6 @@ class BloomCreate extends Command
         $relatedTable = strtolower(Str::plural($relatedModel));
         $time = $this->getCurrentTime(-1);
         $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($name)) . "_table.php";
-
-//        if ($relationType === "hasMany") {
-//            $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($relatedModel)) . "_table.php";
-//            $tableName = strtolower(Str::plural($relatedModel));
-//            $relatedTable = strtolower(Str::plural($name));
-//        }
 
         if ($relationType === "hasMany") {
             $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($relatedModel)) . "_table.php";
@@ -543,7 +504,6 @@ class BloomCreate extends Command
         $migrationStub = $this->getStub('Migration');
         $attributeNames = array_map('trim', explode(',', $attributes));
 
-        // Creating the migration schema
         $schema = '';
         foreach ($attributeNames as $attributeName) {
             list($columnName, $columnType) = array_map('trim', explode(':', $attributeName));
@@ -751,7 +711,6 @@ class BloomCreate extends Command
         $attributeFlags = [];
 
         foreach ($attributePairs as $pair) {
-            // Check if the validation rules are provided
             if (str_contains($pair, ':')) {
                 list($attrName, $rules) = explode(":", $pair, 2);
 
@@ -759,18 +718,14 @@ class BloomCreate extends Command
                     'isImage' => false,
                 ];
 
-                // Split the rules by the pipe character
                 $individualRules = explode('|', $rules);
 
-                // Validate each provided rule
                 foreach ($individualRules as $rule) {
                     $ruleParts = explode(':', $rule);
 
-                    // Extract rule type and value
                     $ruleType = $ruleParts[0];
                     $ruleValue = count($ruleParts) > 1 ? $ruleParts[1] : null;
 
-                    // Handle specific rules
                     switch ($ruleType) {
                         case 'max':
                             if (!is_numeric($ruleValue)) {
@@ -814,10 +769,8 @@ class BloomCreate extends Command
                 }
 
             } else {
-                // If no colon then it's just an attribute
                 list($attrName, $attrType) = explode(":", $pair);
 
-                // Check if the attribute type is supported
                 if (!in_array($attrType, $supportedAttributes)) {
                     echo "Invalid Attribute Type\n";
                     return false;
@@ -867,18 +820,12 @@ class BloomCreate extends Command
      */
     protected function initiateFileCreation($name, $attributes, $relatedModel, $relationType, $flags)
     {
-        // Parse the attributes
         $fixedAttributes = $this->parseAttributes($attributes);
 
-        // Creating the controller
         $this->controller($name, $relatedModel, $relationType, $flags);
-        // Creating the model
         $this->model($name, $attributes, $relatedModel, $relationType);
-        // Creating the request
         $this->request($name, $attributes, $flags);
-        // Creating the migration
         $this->makeMigration($name, $fixedAttributes);
-        // Create the form view
         $this->createFormView($name, $relatedModel, $relationType);
     }
 
@@ -896,18 +843,13 @@ class BloomCreate extends Command
         foreach ($attributeDefinitions as $attribute) {
 
             $attributeDefinition = trim($attribute);
-            // Extracting the name
             $name = Str::before($attributeDefinition, ':');
-            // Extacting the type and the validations
             $typeAndValidations = Str::after($attributeDefinition, ':');
-            // Taking only the type
             $type = Str::before($typeAndValidations, '|');
 
-            // Appending each attribute to the array
             $parsedAttributes[] = "$name:$type";
         }
 
-        // Join them with ','
         return implode(', ', $parsedAttributes);
     }
 

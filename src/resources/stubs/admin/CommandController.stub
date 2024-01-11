@@ -41,7 +41,6 @@ class CommandController extends Controller
 
     protected function execute($commandName, Request $request, $fromList = false)
     {
-        // Validation
         $request->validate([
             'crudName' => 'required|string|max:30',
             'relatedModel' => 'nullable|string|max:30',
@@ -100,16 +99,12 @@ class CommandController extends Controller
 
     protected function createdCruds()
     {
-        // Tables to exclude from the display
         $excludedTables = ['migrations', 'password_resets', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens'];
 
-        // Retrieve the list of tables in the database, excluding the specified tables
         $tables = DB::select("SHOW TABLES");
 
-        // Extract table names from the result set
         $filteredTables = array_column($tables, "Tables_in_" . config('database.connections.mysql.database'));
 
-        // Filter out excluded tables
         $filteredTables = array_diff($filteredTables, $excludedTables);
 
         $tableInfo = [];
@@ -294,7 +289,6 @@ class CommandController extends Controller
         if ($fromList) {
             return $output;
         } else {
-            // Check if the command was executed successfully
             if (str_starts_with($output, 'ERROR 1:')) {
                 return redirect()->back()->with('error', "Command execution failed. {$crudName} CRUD already exists.");
             } elseif (str_starts_with($output, 'CREATION SUCCESS:')) {

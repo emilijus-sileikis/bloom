@@ -81,7 +81,6 @@ class {{modelName}}Controller extends Controller
 
         $this->handleFrontRules($formRequest, $requiredRules, $maxRules, $minRules);
 
-        // Exclude the id field
         unset($fieldTypes['id']);
 
         $fields = {{modelName}}::mapFieldTypes($fieldTypes);
@@ -113,7 +112,6 @@ class {{modelName}}Controller extends Controller
                     $path = $image->move($imageDir, $name);
                     $data[$imageFieldName] = $path;
 
-                    // Delete old file
                     if (${{modelNameSingularLowerCase}}->$imageFieldName) {
                         $oldPath = public_path(${{modelNameSingularLowerCase}}->$imageFieldName);
 

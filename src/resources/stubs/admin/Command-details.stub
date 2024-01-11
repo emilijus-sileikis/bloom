@@ -59,7 +59,6 @@
                                 </form>
 
                                 <script>
-                                    // Show/hide table deletion fields based on checkbox state
                                     var tableCheckbox = document.getElementById('dropTable');
                                     var pivotField = document.getElementById('pivot');
 
@@ -117,7 +116,6 @@
                                 </form>
 
                                 <script>
-                                    // Show/hide related model fields based on checkbox state
                                     var relatedModelCheckbox = document.getElementById('relatedModelCheckbox');
                                     var relatedModelFields = document.getElementById('hidden');
 
@@ -131,7 +129,6 @@
                                         }
                                     });
 
-                                    // Validate form on submit
                                     document.getElementById('bloomCreateForm').addEventListener('submit', function(event) {
                                         if (relatedModelCheckbox.checked && document.getElementById('relatedModel').value === '') {
                                             event.preventDefault();
@@ -146,12 +143,10 @@
                                     });
 
                                     function updateSelectedOptions() {
-                                        // Get selected values
                                         var selectedModel = document.getElementById('relatedModel').value;
                                         var selectedRelationship = document.getElementById('relationshipType').value;
                                         var crudName = document.getElementById('crudName').value;
 
-                                        // Update display div
                                         var selectedRelationElement = document.getElementById('selectedRelation');
                                         var selectedOptionsDiv = document.getElementById('selectedOptions');
 

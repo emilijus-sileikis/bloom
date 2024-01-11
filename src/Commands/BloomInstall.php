@@ -77,7 +77,6 @@ class BloomInstall extends Command
      */
     protected function updateUserTable($table = 'users', $column = 'is_admin')
     {
-        // Check if column already exists
         if (!Schema::hasColumn($table, $column)) {
             Schema::table($table, function (Blueprint $table) use ($column) {
                 $table->boolean($column)->default(0);
@@ -88,7 +87,6 @@ class BloomInstall extends Command
             $this->info("$column column already exists in the $table table. No changes made.");
         }
 
-        // Add 'is_admin' to $fillable in User.php
         $userModelPath = app_path('Models/User.php');
         $userModelContents = file_get_contents($userModelPath);
 
@@ -97,11 +95,9 @@ class BloomInstall extends Command
 
     'is_admin',
 EOT;
-            // Append 'is_admin' to $fillable
             file_put_contents($userModelPath, str_replace("'password',", "'password',\n" . $fillableCode, $userModelContents));
         }
 
-        // Migrate the database
         Artisan::call('migrate');
     }
 
@@ -134,7 +130,6 @@ EOT;
         $content = file_get_contents($kernel);
 
         if (!str_contains($content, 'AdminMiddleware::class')) {
-            // Add AdminMiddleware to Kernel.php
             $replacement = "'admin' => \App\Http\Middleware\AdminMiddleware::class,";
 
             $content = preg_replace(
@@ -156,7 +151,6 @@ EOT;
 
         $content = File::get($webFilePath);
 
-        // Replace the old route definition
         $oldRoute = "Route::get('/dashboard', function () {\n    return view('dashboard');\n})->middleware(['auth', 'verified'])->name('dashboard');\n";
         $newRoute = "Route::get('/dashboard', [App\Http\Controllers\Admin\CommandController::class, 'index'])->middleware(['auth', 'admin'])->name('dashboard');\n";
         $content = str_replace($oldRoute, $newRoute, $content);

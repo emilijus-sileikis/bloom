@@ -21,7 +21,6 @@ class {{migrationClassName}} extends Migration
 
             $table->timestamps();
 
-            // Prevent duplicates
             $table->unique(['{{tableName1}}_id', '{{tableName2}}_id']);
         });
     }

@@ -171,17 +171,14 @@ class BloomDelete extends Command
 
         foreach ($lines as $line) {
 
-            // Check if the line has a route definition
             if (str_contains($line, "Route::")) {
                 $isRoute = true;
             }
 
-            // If its the route we are deleting we skip it
             if ($isRoute && str_contains($line, $name)) {
                 continue;
             }
 
-            // Check if the route definition ends
             if ($isRoute && str_contains($line, ');')) {
                 $isRoute = false;
             }
@@ -189,7 +186,6 @@ class BloomDelete extends Command
             $newContent .= $line;
         }
 
-        // Trim the empty space from the end
         $newContent = trim($newContent);
 
         file_put_contents($filePath, $newContent);
@@ -272,7 +268,4 @@ class BloomDelete extends Command
             }
         }
     }
-
-
-
 }
