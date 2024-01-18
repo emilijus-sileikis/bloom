@@ -309,6 +309,8 @@ class CommandController extends Controller
                 return redirect()->back()->with('error', "Constraint violation. {$output}");
             } elseif (str_starts_with($output, 'ERROR 8:')) {
                 return redirect()->back()->with('error', "An error occurred while deleting the table. {$output}");
+            } elseif (str_starts_with($output, 'ERROR 11:')) {
+                return redirect()->back()->with('error', "{$output}");
             } else {
                 return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
             }

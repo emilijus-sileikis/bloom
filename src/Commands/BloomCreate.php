@@ -38,6 +38,11 @@ class BloomCreate extends Command
         $relationType = $this->option('relation-type');
         $relatedModel = $this->option('related-model');
 
+        if (!$this->checkSingularity($name)) {
+            $this->error("ERROR 11: {$name}. Name MUST be singular!");
+            return;
+        }
+
         if (!$this->checkAttributes($attributes)) {
             $this->error("ERROR 2: {$attributes}. Not supported attribute type found here.");
             return;
@@ -948,5 +953,20 @@ class BloomCreate extends Command
 
         $this->placeContents('admin/Edit-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'edit', $scriptName);
         $this->placeContents('admin/Create-form', $entityName, $entityNamePlural, $relatedSelect, $nameLower, $namePluralLower, 'create', $scriptName);
+    }
+
+    /**
+     * Check if the entered name is singular.
+     *
+     * @param string $name
+     * @return bool
+     */
+    protected function checkSingularity($name)
+    {
+        if ($name === Str::singular($name)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
