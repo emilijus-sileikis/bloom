@@ -179,5 +179,12 @@ class {{modelName}}Controller extends Controller
                 $minRules[$field] = 'min:' . $matches[1];
             }
         }
+
+        $model = new {{modelName}}();
+        foreach ($model->getFillable() as $field) {
+            if (str_contains($field, '_id')) {
+                $requiredRules[$field] = 'required';
+            }
+        }
     }
 }

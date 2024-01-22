@@ -32,7 +32,11 @@
                                 @foreach($fields as $field => $type)
                                     <label for="{{ $field }}">{{ ucfirst($field) }}:</label>
                                         @if($field === "{{ $relatedLowerSingular }}_id" && $type !== 'file')
-                                            <select class="form-control mb-3" name="{{ $relatedLowerSingular }}_id">
+                                            <select class="form-control mb-3" name="{{ $relatedLowerSingular }}_id"
+                                                @if(isset($requiredRules[$field]))
+                                                    required
+                                               @endif
+                                            >
                                                 @foreach(${{ $relatedLower }} as $related)
                                                     <option value="{{ $related->id }}" {{ ${{ $entityName }}->$field == $related->id ? 'selected' : '' }}>
                                                         {{ $related->name ?? $related->title ?? $related }}
