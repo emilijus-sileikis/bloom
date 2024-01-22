@@ -50,10 +50,20 @@
                                         <label for="dropTable">Check if you want to drop related tables on CRUD deletion:</label>
                                         <input type="checkbox" id="dropTable" name="dropTable" style="width: 22px; height: 22px; vertical-align: middle;">
 
-                                        <div id="pivot" style="display: none;">
-                                            <label for="pivotTable">Pivot table name (for N:M relations only!) (e.g. post_user):</label>
-                                            <input type="text" class="form-control mb-3" id="pivotTable" name="pivotTable" maxlength="30">
-                                        </div>
+                                            <div id="pivot" style="display: none;">
+                                                @if (!empty($pivotTables))
+                                                    <label for="pivotTable">Pivot table name (for N:M relations only!) (e.g. post_user):</label>
+                                                    <select class="form-control mb-3" id="pivotTable" name="pivotTable" maxlength="30">
+                                                        <option value="">Select a pivot table</option>
+                                                        @foreach($pivotTables as $pivotTable)
+                                                            <option value="{{ $pivotTable }}">{{ $pivotTable }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @else
+                                                    <label for="pivotTable">Pivot table name (for N:M relations only!) (e.g. post_user):</label>
+                                                    <input type="text" class="form-control mb-3" id="pivotTable" name="pivotTable" maxlength="30">
+                                                @endif
+                                            </div>
                                     </div>
                                     <button type="submit" class="btn btn-primary mt-2">Execute Command</button>
                                 </form>
@@ -69,6 +79,14 @@
                                             pivotField.style.display = 'none';
                                         }
                                     });
+                                    
+                                    if (@json(!empty($pivotTables))) {
+                                        pivotDropdown.style.display = 'block';
+                                        pivotInput.style.display = 'none';
+                                    } else {
+                                        pivotDropdown.style.display = 'none';
+                                        pivotInput.style.display = 'block';
+                                    }
                                 </script>
 
                             @elseif ($commandName == 'bloom:create')

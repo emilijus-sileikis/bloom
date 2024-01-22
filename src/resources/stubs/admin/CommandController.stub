@@ -30,8 +30,10 @@ class CommandController extends Controller
         $modelPath = app_path('/Models');
         $allModels = $this->getAllModels($modelPath);
         $commandDescription = $this->getCommandsAndDescriptions($commandName);
+        $pivotTables = $this->getPivotTables($allModels);
 
-        return view('admin.command-details', compact('commandName', 'commandDescription', 'allModels'));
+
+        return view('admin.command-details', compact('commandName', 'commandDescription', 'allModels', 'pivotTables'));
     }
 
     public function examples()
@@ -280,6 +282,31 @@ class CommandController extends Controller
         return $models;
     }
 
+    function getPivotTables($models)
+    {
+        $databaseName = env('DB_DATABASE');
+        $tables = DB::select('SHOW TABLES');
+        $models = array_map(fn ($model) => strtolower(Str::singular($model)), $models);
+
+        $pivotTables = [];
+
+        foreach ($tables as $table) {
+            $parameter = "Tables_in_{$databaseName}";
+            $tableName = $table->$parameter;
+
+            if (preg_match('/^(\w+)_(\w+)$/', $tableName, $matches)) {
+                $model1 = $matches[1];
+                $model2 = $matches[2];
+
+                if (in_array($model1, $models) && in_array($model2, $models)) {
+                    $pivotTables[] = $tableName;
+                }
+            }
+        }
+
+        return $pivotTables;
+    }
+
     public function commandCall($fullCommand, $crudName, $fromList)
     {
         Artisan::call($fullCommand);
@@ -311,6 +338,8 @@ class CommandController extends Controller
                 return redirect()->back()->with('error', "An error occurred while deleting the table. {$output}");
             } elseif (str_starts_with($output, 'ERROR 11:')) {
                 return redirect()->back()->with('error', "{$output}");
+            } elseif (str_starts_with($output, 'ERROR 12:')) {
+                return redirect()->back()->with('error', "Wrong pivot table or model name.");
             } else {
                 return redirect()->back()->with('status', "Command executed successfully! Output: {$output}");
             }

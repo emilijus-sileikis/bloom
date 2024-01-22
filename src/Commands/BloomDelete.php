@@ -77,6 +77,11 @@ class BloomDelete extends Command
                 return;
             }
 
+            if (!str_contains($this->option('pivot-table'), $tableNameSingular)) {
+                $this->error("ERROR 12: Wrong pivot table or model name.");
+                return;
+            }
+
             if (!Schema::hasTable($pivotTableName)) {
                 $this->error("ERROR 6: The table '{$pivotTableName}' does not exist in the database.");
                 return;
