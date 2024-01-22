@@ -153,8 +153,15 @@ class {{modelName}}Controller extends Controller
             }
         }
 
-        ${{modelNameSingularLowerCase}}->delete();
-
+        try {
+            ${{modelNameSingularLowerCase}}->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() == 23000) {
+                return redirect()->back()->with('error', 'Cannot delete this entry because it has related items.');
+            } else {
+                throw $e;
+            }
+        }
         return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
     }
 
