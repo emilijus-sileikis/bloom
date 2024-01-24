@@ -215,18 +215,25 @@ class CommandController extends Controller
 
     protected function migrate()
     {
-        Artisan::call('migrate');
-        $output = Artisan::output();
+        try {
+            Artisan::call('migrate');
+            $output = Artisan::output();
 
-        if (str_contains($output, 'Error:')) {
-            return redirect()->back()->with('error', "Command execution failed: {$output}");
-        } else if (str_contains($output, 'Nothing to migrate.')) {
-            return redirect()->back()->with('error', "Nothing to migrate.");
-        } else {
-            Artisan::call('route:clear');
-            return redirect()->back()->with('status', "Command executed successfully: {$output}");
+            if (str_contains($output, 'Error:')) {
+                return redirect()->back()->with('error', "Command execution failed: {$output}");
+            } else if (str_contains($output, 'Nothing to migrate.')) {
+                return redirect()->back()->with('error', "Nothing to migrate.");
+            } else {
+                Artisan::call('route:clear');
+                return redirect()->back()->with('status', "Command executed successfully: {$output}");
+            }
+        } catch (QueryException $e) {
+            if ($e->errorInfo[1] == 1452) {
+                return redirect()->back()->with('error', "You have added a foreign key to a table with already existing data. All the values were set to 0!");
+            } else {
+                return redirect()->back()->with('error', "An error occured while migrating: {$e->errorInfo[2]}");
+            }
         }
-
     }
 
     private function getCommandsAndDescriptions($specificCommand = null)

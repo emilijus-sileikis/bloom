@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\{{modelName}};
 use App\Http\Requests\{{modelName}}Request;
+use Illuminate\Database\QueryException;
 {{relatedModelUseField}}
 
 class {{modelName}}Controller extends Controller
