@@ -407,6 +407,11 @@ class BloomCreate extends Command
         $relatedTable = strtolower(Str::plural($relatedModel));
         $time = $this->getCurrentTime(-1);
         $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($name)) . "_table.php";
+        $unique = '';
+
+        if ($relationType === "hasOne") {
+            $unique = "->unique()";
+        }
 
         if ($relationType === "hasMany") {
             $migrationFileName = "{$time}_add_{$foreignKeyName}_to_" . strtolower(Str::plural($relatedModel)) . "_table.php";
@@ -419,11 +424,13 @@ class BloomCreate extends Command
                 '{{tableName}}',
                 '{{columnName}}',
                 '{{relatedTable}}',
+                '{{unique}}',
             ],
             [
                 $tableName,
                 $foreignKeyName,
                 $relatedTable,
+                $unique,
             ],
             $this->getStub('RelationMigration')
         );

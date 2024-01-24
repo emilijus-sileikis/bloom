@@ -35,31 +35,39 @@ class {{modelName}}Controller extends Controller
 
     public function store({{modelName}}Request $request)
     {
-        $data = $request->all();
+        try {
+            $data = $request->all();
 
-        $imageFieldName = null;
-        $imageDir = 'uploads/'.$data['modelName'];
+            $imageFieldName = null;
+            $imageDir = 'uploads/'.$data['modelName'];
 
-        foreach ($request->all() as $field => $value) {
-            if ($value instanceof \Illuminate\Http\UploadedFile) {
-                $imageFieldName = $field;
-                break;
+            foreach ($request->all() as $field => $value) {
+                if ($value instanceof \Illuminate\Http\UploadedFile) {
+                    $imageFieldName = $field;
+                    break;
+                }
             }
-        }
 
-        if ($imageFieldName !== null && $request->hasFile($imageFieldName)) {
-                    $image = $request->file($imageFieldName);
-                    $ext = $image->getClientOriginalExtension();
-                    $name = uniqid().'.'.$ext;
-                    $path = $image->move($imageDir, $name);
-                    $data[$imageFieldName] = $path;
-        }
+            if ($imageFieldName !== null && $request->hasFile($imageFieldName)) {
+                        $image = $request->file($imageFieldName);
+                        $ext = $image->getClientOriginalExtension();
+                        $name = uniqid().'.'.$ext;
+                        $path = $image->move($imageDir, $name);
+                        $data[$imageFieldName] = $path;
+            }
 
-        ${{modelNameSingularLowerCase}} = {{modelName}}::create($data);
+            ${{modelNameSingularLowerCase}} = {{modelName}}::create($data);
 
-        {{belongsToMany}}
+            {{belongsToMany}}
 
-        return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
+            return redirect()->route('dashboard.cruds.data', ['tableName' => '{{modelNameLowerCase}}']);
+        } catch (QueryException $e) {
+          if ($e->errorInfo[1] == 1062) {
+              return redirect()->back()->with('error', 'Unable to create author. Duplicate entry!');
+          }
+
+          return redirect()->back()->with('error', 'Unable to create author. An error occurred!');
+      }
     }
 
     public function show({{modelName}} ${{modelNameSingularLowerCase}})
